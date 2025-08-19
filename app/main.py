@@ -9,7 +9,7 @@ from loguru import logger
 from app.routers import clientes, pages # <-- ADICIONADO pages
 
 # ... (configuração do logger) ...
-logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="INFO")
+logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="DEBUG")
 
 
 app = FastAPI(

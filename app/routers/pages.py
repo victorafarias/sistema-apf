@@ -51,7 +51,7 @@ async def handle_create_cliente(request: Request, nome: str = Form(...)):
     """
     logger.info(f"Recebido formulário para criar cliente: {nome}")
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{API_BASE_URL}/clientes/", json={"nome": nome})
+        response = await client.post(f"{API_BASE_URL}/clientes", json={"nome": nome})
     
     # --- LOGS DE DIAGNÓSTICO ---
     logger.debug(f"API respondeu com status: {response.status_code}")
