@@ -17,16 +17,27 @@ async def list_clientes_page(request: Request):
     """
     Renderiza a página que lista os clientes.
     """
-    async with httpx.AsyncClient() as client:
-        # Chama o nosso endpoint da API para obter a lista de clientes
-        response = await client.get(f"{API_BASE_URL}/clientes")
-    
+    logger.info("Acessando a página de listagem de clientes.")
     clientes = []
-    if response.status_code == 200:
-        clientes = response.json()
-    else:
-        # Aqui poderíamos adicionar uma mensagem de erro na página
-        pass
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{API_BASE_URL}/clientes/")
+        
+        # --- LOGS DE DIAGNÓSTICO ---
+        logger.debug(f"Página de listagem chamou API. Status: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"Erro ao buscar clientes da API. Resposta: {response.text}")
+        # ---------------------------
+
+        if response.status_code == 200:
+            clientes = response.json()
+            logger.info(f"Clientes encontrados via API: {len(clientes)}")
+        else:
+            logger.warning("Nenhum cliente retornado ou houve erro na API.")
+
+    except httpx.RequestError as exc:
+        logger.critical(f"Erro de conexão ao tentar chamar a API de clientes: {exc}")
 
     # Renderiza o template HTML, passando os dados dos clientes
     return templates.TemplateResponse("clientes_list.html", {
@@ -51,7 +62,7 @@ async def handle_create_cliente(request: Request, nome: str = Form(...)):
     """
     logger.info(f"Recebido formulário para criar cliente: {nome}")
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{API_BASE_URL}/clientes", json={"nome": nome})
+        response = await client.post(f"{API_BASE_URL}/clientes/", json={"nome": nome})
     
     # --- LOGS DE DIAGNÓSTICO ---
     logger.debug(f"API respondeu com status: {response.status_code}")
