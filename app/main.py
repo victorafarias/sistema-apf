@@ -1,23 +1,33 @@
 # app/main.py
 
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+from loguru import logger
 
-# Cria uma instância da aplicação FastAPI
-# O título e a versão são úteis para a documentação automática
+# Importa o roteador que criamos
+from app.routers import clientes
+
+# Configuração do logger (pode manter como estava)
+logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="INFO")
+
 app = FastAPI(
     title="Sistema de Gerenciamento de Contagens de Pontos de Função",
-    version="0.1.0"
+    version="0.1.0",
+    default_response_class=ORJSONResponse,
 )
 
-# Define uma rota (endpoint) para a raiz da API ("/")
-# O decorador @app.get("/") informa ao FastAPI que esta função
-# deve responder a requisições HTTP GET na URL raiz.
+# Inclui o roteador de clientes na aplicação principal
+app.include_router(clientes.router)
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Iniciando a aplicação...")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Encerrando a aplicação...")
+
 @app.get("/", tags=["Root"])
 def read_root():
-    """
-    Endpoint raiz que retorna uma mensagem de boas-vindas.
-    Útil para verificar se a API está no ar.
-    """
+    logger.info("Acessando a rota raiz.")
     return {"message": "Bem-vindo ao Sistema de Gerenciamento de APF!"}
-
-# Aqui adicionaremos mais código conforme desenvolvemos as funcionalidades.
