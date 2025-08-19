@@ -1,41 +1,72 @@
 {% extends "base.html" %}
 
-{% block title %}Lista de Clientes{% endblock %}
+{% block title %}Lista de Clientes - Sistema APF{% endblock %}
 
 {% block content %}
-    <header>
-        <h2>Clientes Cadastrados</h2>
-        </header>
+    <h1 class="h3 mb-2 text-gray-800">Clientes Cadastrados</h1>
+    <p class="mb-4">Gerencie os clientes do sistema.</p>
 
-    <figure>
-        <table>
-            <thead>
-                <tr>
-                    <th scope="col">ID</th>
-                    <th scope="col">Nome</th>
-                    <th scope="col">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cliente in clientes %}
-                <tr>
-                    <td>{{ cliente.id }}</td>
-                    <td>{{ cliente.nome }}</td>
-                    <td>
-                        <a href="#" role="button" class="secondary outline">Editar</a>
-                        <a href="#" role="button" class="contrast outline">Excluir</a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3">Nenhum cliente cadastrado.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </figure>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="/clientes">
+                <div class="form-row">
+                    <div class="col-md-5">
+                        <input type="number" name="id_filter" class="form-control" placeholder="Filtrar por ID..." value="{{ id_filter or '' }}">
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="nome_filter" class="form-control" placeholder="Filtrar por Nome..." value="{{ nome_filter or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <footer>
-      <a href="/clientes/novo" role="button">Adicionar Novo Cliente</a>
-    </footer>
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Clientes</h6>
+            <a href="/clientes/novo" class="btn btn-success btn-icon-split btn-sm">
+                <span class="icon text-white-50"><i class="fas fa-plus"></i></span>
+                <span class="text">Adicionar Novo Cliente</span>
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th style="width: 200px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in clientes %}
+                        <tr>
+                            <td>{{ cliente.id }}</td>
+                            <td>{{ cliente.nome }}</td>
+                            <td>
+                                <a href="/clientes/{{ cliente.id }}/editar" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
+                                <a href="/clientes/{{ cliente.id }}/excluir" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Excluir
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center">Nenhum cliente encontrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 {% endblock %}

@@ -37,17 +37,25 @@ async def read_clientes(
     session: AsyncSession = Depends(get_session),
     offset: int = 0,
     limit: int = Query(default=100, lte=100),
-    nome_filter: Optional[str] = None
+    nome_filter: Optional[str] = None,
+    id_filter: Optional[int] = None # <-- NOVO: Parâmetro para filtrar por ID
 ):
     """
-    Lista os clientes com paginação e filtro por nome.
+    Lista os clientes com paginação e filtros, ordenados por nome.
     """
     query = select(Cliente)
     
     if nome_filter:
-        # Adiciona um filtro 'like' para buscar por partes do nome
-        query = query.where(Cliente.nome.contains(nome_filter))
+    # Usa 'ilike' para buscar por partes do nome, ignorando maiúsculas/minúsculas.
+    # O f-string com '%' adiciona os curingas para a busca em qualquer parte do texto.
+        query = query.where(Cliente.nome.ilike(f"%{nome_filter}%"))
         
+    if id_filter: # <-- NOVO: Lógica para aplicar o filtro de ID
+        query = query.where(Cliente.id == id_filter)
+        
+    # ADICIONADO: Ordena a consulta pelo nome do cliente em ordem crescente
+    query = query.order_by(Cliente.nome)
+    
     query = query.offset(offset).limit(limit)
     
     result = await session.execute(query)

@@ -3,6 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import ORJSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 # Importa os roteadores da API e das páginas
@@ -20,6 +21,7 @@ app = FastAPI(
 
 # --- CONFIGURAÇÃO DO FRONT-END ---
 # Aponta para a pasta onde os templates HTML estão localizados
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 # ---------------------------------
 
