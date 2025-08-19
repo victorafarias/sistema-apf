@@ -1,26 +1,22 @@
-from dotenv import load_dotenv
+# alembic/env.py
 
-# Carrega as variáveis do arquivo .env
-load_dotenv()
-
-# ADICIONE ESTA LINHA PARA VER O QUE ESTÁ SENDO CARREGADO
-print(f"--> Variável de Ambiente Carregada: {os.getenv('DATABASE_URL')}")
-
+# Imports nativos do Python
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
+# Imports de bibliotecas de terceiros (pip install)
+from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool, create_engine
 from alembic import context
-
-from app.models import SQLModel # ou o modelo específico, ex: from app.models import Cliente
-
-from app.models import Base
-
 from sqlmodel import SQLModel
 
-from app import models
+# Imports do seu próprio projeto
+from app import models # Esta linha carrega seu modelo Cliente
+
+# --- Fim dos imports ---
+
+# Carrega as variáveis do arquivo .env
+load_dotenv()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -74,11 +70,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Pega a URL diretamente da variável de ambiente que já sabemos que está correta.
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL não encontrada no ambiente.")
+
+    # Cria um engine síncrono manualmente para o Alembic.
+    connectable = create_engine(db_url)
 
     with connectable.connect() as connection:
         context.configure(
