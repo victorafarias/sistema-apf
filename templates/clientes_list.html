@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Clientes{% endblock %}
+
+{% block content %}
+    <header>
+        <h2>Clientes Cadastrados</h2>
+        </header>
+
+    <figure>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nome</th>
+                    <th scope="col">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr>
+                    <td>{{ cliente.id }}</td>
+                    <td>{{ cliente.nome }}</td>
+                    <td>
+                        <a href="#" role="button" class="secondary outline">Editar</a>
+                        <a href="#" role="button" class="contrast outline">Excluir</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3">Nenhum cliente cadastrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </figure>
+
+    <footer>
+      <a href="/clientes/novo" role="button">Adicionar Novo Cliente</a>
+    </footer>
+{% endblock %}

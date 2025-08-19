@@ -1,14 +1,16 @@
 # app/main.py
 
-from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import ORJSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from loguru import logger
 
-# Importa o roteador que criamos
-from app.routers import clientes
+# Importa os roteadores da API e das páginas
+from app.routers import clientes, pages # <-- ADICIONADO pages
 
-# Configuração do logger (pode manter como estava)
+# ... (configuração do logger) ...
 logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="INFO")
+
 
 app = FastAPI(
     title="Sistema de Gerenciamento de Contagens de Pontos de Função",
@@ -16,8 +18,16 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
 )
 
-# Inclui o roteador de clientes na aplicação principal
-app.include_router(clientes.router)
+# --- CONFIGURAÇÃO DO FRONT-END ---
+# Aponta para a pasta onde os templates HTML estão localizados
+templates = Jinja2Templates(directory="templates")
+# ---------------------------------
+
+
+# Inclui os roteadores na aplicação principal
+app.include_router(clientes.router, prefix="/api") # <-- ADICIONADO PREFIXO /api
+app.include_router(pages.router) # <-- NOVO ROTEADOR DE PÁGINAS
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -27,7 +37,9 @@ async def startup_event():
 async def shutdown_event():
     logger.info("Encerrando a aplicação...")
 
-@app.get("/", tags=["Root"])
-def read_root():
-    logger.info("Acessando a rota raiz.")
-    return {"message": "Bem-vindo ao Sistema de Gerenciamento de APF!"}
+# A rota raiz agora vai redirecionar para a nossa página de clientes
+@app.get("/", tags=["Root"], response_class=HTMLResponse, include_in_schema=False)
+async def read_root(request: Request):
+    # Por enquanto, apenas para confirmar que funciona.
+    # Vamos criar um template para a raiz depois.
+    return templates.TemplateResponse("root.html", {"request": request})
