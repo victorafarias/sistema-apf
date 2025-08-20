@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Fatores de Ajuste - Sistema APF{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-2 text-gray-800">Fatores de Ajuste (VIMs)</h1>
+<p class="mb-4">Gerencie os Fatores de Ajuste do sistema.</p>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" action="/fatores-ajuste">
+            <div class="form-row align-items-end">
+                <div class="col-md-4">
+                    <label for="nome_filter">Nome</label>
+                    <input type="text" id="nome_filter" name="nome_filter" class="form-control" placeholder="Filtrar por Nome..." value="{{ nome_filter or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="fator_filter">Fator</label>
+                    <input type="number" step="0.01" id="fator_filter" name="fator_filter" class="form-control" placeholder="Filtrar por Fator..." value="{{ fator_filter or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="tipo_ajuste_filter">Tipo de Ajuste</label>
+                    <select id="tipo_ajuste_filter" name="tipo_ajuste_filter" class="form-control">
+                        <option value="">Todos</option>
+                        {% for tipo in tipos_ajuste %}
+                        <option value="{{ tipo }}" {% if tipo == tipo_ajuste_filter %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Lista de Fatores</h6>
+        <a href="/fatores-ajuste/novo" class="btn btn-success btn-icon-split btn-sm">
+            <span class="icon text-white-50"><i class="fas fa-plus"></i></span>
+            <span class="text">Adicionar Novo Fator</span>
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Fator</th>
+                        <th>Tipo de Ajuste</th>
+                        <th style="width: 200px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fator in fatores %}
+                    <tr>
+                        <td>{{ fator.id }}</td>
+                        <td>{{ fator.nome }}</td>
+                        <td>{{ fator.fator }}</td>
+                        <td>{{ fator.tipo_ajuste }}</td>
+                        <td>
+                            <a href="/fatores-ajuste/{{ fator.id }}/editar" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <a href="/fatores-ajuste/{{ fator.id }}/excluir" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash"></i> Excluir
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">Nenhum fator de ajuste encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

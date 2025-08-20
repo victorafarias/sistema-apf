@@ -173,3 +173,114 @@ async def handle_delete_cliente(request: Request, cliente_id: int):
     
     # Após a exclusão, sempre redireciona para a lista de clientes
     return RedirectResponse(url="/clientes", status_code=303)
+
+# app/routers/pages.py (adicionar ao final do arquivo)
+from app.models import TipoAjuste # Importa o Enum para usar no formulário
+
+# --- ROTAS PARA FATORES DE AJUSTE ---
+
+@router.get("/fatores-ajuste", response_class=HTMLResponse)
+async def list_fatores_page(
+    request: Request, 
+    nome_filter: Optional[str] = None,
+    fator_filter: Optional[str] = None, # <-- NOVO
+    tipo_ajuste_filter: Optional[str] = None # <-- NOVO (como string para pegar o valor vazio)
+):
+    """
+    Renderiza a página que lista os fatores de ajuste, aplicando filtros.
+    """
+    params = {}
+    if nome_filter:
+        params["nome_filter"] = nome_filter
+    if fator_filter is not None:
+        params["fator_filter"] = fator_filter
+    if tipo_ajuste_filter:
+        params["tipo_ajuste_filter"] = tipo_ajuste_filter
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/fatores-ajuste/", params=params)
+
+    fatores = response.json() if response.status_code == 200 else []
+
+    return templates.TemplateResponse("fatores_ajuste/list.html", {
+        "request": request,
+        "fatores": fatores,
+        "nome_filter": nome_filter,
+        "fator_filter": fator_filter, # <-- NOVO
+        "tipo_ajuste_filter": tipo_ajuste_filter, # <-- NOVO
+        "tipos_ajuste": [e.value for e in TipoAjuste] # <-- NOVO (para o combo)
+    })
+
+@router.get("/fatores-ajuste/novo", response_class=HTMLResponse)
+async def create_fator_form(request: Request):
+    return templates.TemplateResponse("fatores_ajuste/form.html", {
+        "request": request,
+        "tipos_ajuste": [e.value for e in TipoAjuste] # Passa os valores do Enum para o template
+    })
+
+@router.post("/fatores-ajuste/novo", response_class=HTMLResponse)
+async def handle_create_fator(
+    request: Request,
+    nome: str = Form(...),
+    fator: float = Form(...),
+    tipo_ajuste: TipoAjuste = Form(...)
+):
+    payload = {"nome": nome, "fator": fator, "tipo_ajuste": tipo_ajuste.value}
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{API_BASE_URL}/fatores-ajuste/", json=payload)
+    if response.status_code == 201:
+        return RedirectResponse(url="/fatores-ajuste", status_code=303)
+    else:
+        return templates.TemplateResponse("fatores_ajuste/form.html", {
+            "request": request,
+            "tipos_ajuste": [e.value for e in TipoAjuste],
+            "error": "Erro ao salvar o fator de ajuste."
+        })
+
+@router.get("/fatores-ajuste/{fator_id}/editar", response_class=HTMLResponse)
+async def edit_fator_form(request: Request, fator_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/fatores-ajuste/{fator_id}")
+    if response.status_code == 200:
+        fator = response.json()
+        return templates.TemplateResponse("fatores_ajuste/edit.html", {
+            "request": request,
+            "fator": fator,
+            "tipos_ajuste": [e.value for e in TipoAjuste]
+        })
+    return RedirectResponse(url="/fatores-ajuste", status_code=303)
+
+@router.post("/fatores-ajuste/{fator_id}/editar", response_class=HTMLResponse)
+async def handle_edit_fator(
+    request: Request,
+    fator_id: int,
+    nome: str = Form(...),
+    fator: float = Form(...),
+    tipo_ajuste: TipoAjuste = Form(...)
+):
+    payload = {"nome": nome, "fator": fator, "tipo_ajuste": tipo_ajuste.value}
+    async with httpx.AsyncClient() as client:
+        response = await client.patch(f"{API_BASE_URL}/fatores-ajuste/{fator_id}", json=payload)
+    if response.status_code == 200:
+        return RedirectResponse(url="/fatores-ajuste", status_code=303)
+    # Lógica de erro...
+    return RedirectResponse(url=f"/fatores-ajuste/{fator_id}/editar", status_code=303)
+
+
+@router.get("/fatores-ajuste/{fator_id}/excluir", response_class=HTMLResponse)
+async def delete_fator_form(request: Request, fator_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/fatores-ajuste/{fator_id}")
+    if response.status_code == 200:
+        fator = response.json()
+        return templates.TemplateResponse("fatores_ajuste/delete.html", {
+            "request": request,
+            "fator": fator
+        })
+    return RedirectResponse(url="/fatores-ajuste", status_code=303)
+
+@router.post("/fatores-ajuste/{fator_id}/excluir", response_class=HTMLResponse)
+async def handle_delete_fator(request: Request, fator_id: int):
+    async with httpx.AsyncClient() as client:
+        await client.delete(f"{API_BASE_URL}/fatores-ajuste/{fator_id}")
+    return RedirectResponse(url="/fatores-ajuste", status_code=303)

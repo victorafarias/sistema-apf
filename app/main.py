@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 # Importa os roteadores da API e das páginas
-from app.routers import clientes, pages # <-- ADICIONADO pages
+from app.routers import clientes, pages, fatores_ajuste # <-- ADICIONADO pages
 
 # ... (configuração do logger) ...
 logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="DEBUG")
@@ -28,6 +28,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Inclui os roteadores na aplicação principal
 app.include_router(clientes.router, prefix="/api") # <-- ADICIONADO PREFIXO /api
+app.include_router(fatores_ajuste.router, prefix="/api")
 app.include_router(pages.router) # <-- NOVO ROTEADOR DE PÁGINAS
 
 

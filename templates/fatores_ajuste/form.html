@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Fator de Ajuste{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Adicionar Novo Fator de Ajuste</h6>
+    </div>
+    <div class="card-body">
+        <form action="/fatores-ajuste/novo" method="post">
+            <div class="form-group">
+                <label for="nome">Nome do Fator</label>
+                <input type="text" id="nome" name="nome" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="fator">Fator</label>
+                <input type="number" step="0.01" id="fator" name="fator" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="tipo_ajuste">Tipo de Ajuste</label>
+                <select id="tipo_ajuste" name="tipo_ajuste" class="form-control" required>
+                    {% for tipo in tipos_ajuste %}
+                    <option value="{{ tipo }}">{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success">Salvar</button>
+            <a href="/fatores-ajuste" class="btn btn-secondary">Cancelar</a>
+        </form>
+        {% if error %}
+            <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
