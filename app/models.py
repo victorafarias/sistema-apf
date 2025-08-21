@@ -1,46 +1,100 @@
 # app/models.py
 
 import enum
-from typing import Optional, List # Adicione List
-from sqlmodel import Field, SQLModel, Relationship # Adicione Relationship
-
-# --- Modelo Cliente (MODIFICADO) ---
-class Cliente(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    nome: str = Field(index=True, max_length=100)
-    
-    # Adicionamos o relacionamento inverso: um Cliente pode ter vários Projetos.
-    # O 'back_populates' diz ao SQLModel qual campo no modelo 'Projeto'
-    # se refere de volta a este. Isso mantém os dois lados sincronizados.
-    projetos: List["Projeto"] = Relationship(back_populates="cliente")
+from typing import Optional, List
+from datetime import datetime
+from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column, DateTime, Text
 
 
-# --- Enum para o Tipo de Ajuste (sem alteração) ---
+# --- Enums ---
 class TipoAjuste(str, enum.Enum):
     PERCENTUAL = "Percentual"
     UNITARIO = "Unitário"
 
+class TipoContagemEnum(str, enum.Enum):
+    ESTIMATIVA = "Estimativa"
+    INDICATIVA = "Indicativa"
+    DETALHADA = "Detalhada"
 
-# --- Modelo FatorAjuste (sem alteração) ---
+class MetodoContagemEnum(str, enum.Enum):
+    NESMA = "NESMA"
+    IFPUG = "IFPUG"
+    COSMIC = "COSMIC"
+    # Adicione outros métodos se necessário
+
+class TipoFuncaoEnum(str, enum.Enum):
+    ALI = "ALI - Arquivo Lógico Interno"
+    AIE = "AIE - Arquivo de Interface Externa"
+    EE = "EE - Entrada Externa"
+    CE = "CE - Consulta Externa"
+    SE = "SE - Saída Externa"
+
+
+# --- Modelos ---
+class Cliente(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str = Field(index=True, max_length=100)
+    
+    projetos: List["Projeto"] = Relationship(back_populates="cliente")
+    contagens: List["Contagem"] = Relationship(back_populates="cliente") # Relacionamento adicionado
+
+
 class FatorAjuste(SQLModel, table=True):
-    #... (código existente, sem alteração)
     id: Optional[int] = Field(default=None, primary_key=True)
     nome: str = Field(index=True, max_length=100)
     fator: float
     tipo_ajuste: TipoAjuste
 
+    funcoes: List["Funcao"] = Relationship(back_populates="fator_ajuste") # Relacionamento adicionado
 
-# --- NOVO: Modelo Projeto ---
+
 class Projeto(SQLModel, table=True):
-    """
-    Representa a tabela 'projeto' no banco de dados.
-    """
     id: Optional[int] = Field(default=None, primary_key=True)
     nome: str = Field(index=True, max_length=100)
     
-    # Chave estrangeira que aponta para o 'id' da tabela 'cliente'
     cliente_id: int = Field(foreign_key="cliente.id")
-    
-    # O relacionamento principal: um Projeto pertence a um Cliente.
-    # O 'back_populates' aqui corresponde ao que definimos no modelo Cliente.
     cliente: Cliente = Relationship(back_populates="projetos")
+    
+    contagens: List["Contagem"] = Relationship(back_populates="projeto") # Relacionamento adicionado
+
+
+class Contagem(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    descricao: str = Field(max_length=255)
+    tipo_contagem: TipoContagemEnum
+    metodo_contagem: MetodoContagemEnum
+    
+    data_criacao: datetime = Field(
+        sa_column=Column(DateTime, default=datetime.utcnow, nullable=False)
+    )
+
+    responsavel: str = Field(max_length=100)
+    
+    cliente_id: int = Field(foreign_key="cliente.id")
+    cliente: Cliente = Relationship(back_populates="contagens")
+    
+    projeto_id: int = Field(foreign_key="projeto.id")
+    projeto: "Projeto" = Relationship(back_populates="contagens")
+    
+    funcoes: List["Funcao"] = Relationship(back_populates="contagem")
+
+
+class Funcao(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    modulo: str = Field(max_length=100)
+    funcionalidade: str = Field(max_length=255)
+    nome: str = Field(index=True, max_length=255)
+    tipo_funcao: TipoFuncaoEnum
+    qtd_der: int
+    qtd_rlr: int
+    desc_der: Optional[str] = Field(default=None, sa_column=Column(Text))
+    desc_rlr: Optional[str] = Field(default=None, sa_column=Column(Text))
+    insumos: Optional[str] = Field(default=None, sa_column=Column(Text))
+    observacoes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    
+    contagem_id: int = Field(foreign_key="contagem.id")
+    contagem: Contagem = Relationship(back_populates="funcoes")
+    
+    fator_ajuste_id: int = Field(foreign_key="fatorajuste.id")
+    fator_ajuste: FatorAjuste = Relationship(back_populates="funcoes")
