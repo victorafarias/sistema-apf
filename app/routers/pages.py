@@ -23,7 +23,7 @@ async def list_clientes_page(
     Renderiza a página que lista os clientes, aplicando filtros.
     """
     logger.info("Acessando a página de listagem de clientes.")
-    clientes = []
+    clientefs = []
     
     # Constrói os parâmetros da query para a chamada da API
     params = {}
@@ -48,7 +48,7 @@ async def list_clientes_page(
         logger.critical(f"Erro de conexão ao tentar chamar a API de clientes: {exc}")
 
     # Renderiza o template, passando os filtros de volta para preencher os campos
-    return templates.TemplateResponse("clientes_list.html", {
+    return templates.TemplateResponse("clientes/list.html", {
         "request": request,
         "clientes": clientes,
         "nome_filter": nome_filter,
@@ -63,7 +63,7 @@ async def create_cliente_form(request: Request):
     """
     Renderiza a página com o formulário para criar um novo cliente.
     """
-    return templates.TemplateResponse("clientes_form.html", {"request": request})
+    return templates.TemplateResponse("clientes/form.html", {"request": request})
 
 @router.post("/clientes/novo", response_class=HTMLResponse)
 async def handle_create_cliente(request: Request, nome: str = Form(...)):
@@ -85,7 +85,7 @@ async def handle_create_cliente(request: Request, nome: str = Form(...)):
     else:
         logger.error("Falha ao criar cliente. API não retornou 201.")
         # Se deu erro, renderiza o formulário novamente com uma mensagem de erro
-        return templates.TemplateResponse("clientes_form.html", {
+        return templates.TemplateResponse("clientes/form.html", {
             "request": request,
             "error": "Ocorreu um erro ao salvar o cliente. Verifique os logs."
         })
@@ -104,7 +104,7 @@ async def edit_cliente_form(request: Request, cliente_id: int):
         
         if response.status_code == 200:
             cliente = response.json()
-            return templates.TemplateResponse("clientes_edit.html", {
+            return templates.TemplateResponse("clientes/edit.html", {
                 "request": request,
                 "cliente": cliente
             })
@@ -134,7 +134,7 @@ async def handle_edit_cliente(request: Request, cliente_id: int, nome: str = For
         else:
             # Se deu erro, renderiza o formulário novamente com uma mensagem de erro
             error_msg = response.json().get("detail", "Erro desconhecido")
-            return templates.TemplateResponse("clientes_edit.html", {
+            return templates.TemplateResponse("clientes/edit.html", {
                 "request": request,
                 "cliente": {"id": cliente_id, "nome": nome},
                 "error": f"Erro ao atualizar: {error_msg}"
@@ -155,7 +155,7 @@ async def delete_cliente_form(request: Request, cliente_id: int):
     
     if response.status_code == 200:
         cliente = response.json()
-        return templates.TemplateResponse("clientes_delete.html", {
+        return templates.TemplateResponse("clientes/delete.html", {
             "request": request,
             "cliente": cliente
         })

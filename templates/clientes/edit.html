@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Cliente{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Editar Cliente: {{ cliente.nome }}</h6>
+    </div>
+    <div class="card-body">
+        <form action="/clientes/{{ cliente.id }}/editar" method="post">
+            <div class="form-group">
+                <label for="nome">Novo Nome do Cliente</label>
+                <input type="text" id="nome" name="nome" class="form-control" value="{{ cliente.nome }}" required>
+            </div>
+
+            <button type="submit" class="btn btn-success">Salvar Alterações</button>
+            <a href="/clientes" class="btn btn-secondary">Cancelar</a>
+        </form>
+
+        {% if error %}
+            <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
