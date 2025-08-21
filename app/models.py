@@ -4,7 +4,16 @@ import enum
 from typing import Optional, List
 from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, DateTime, Text
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Date,
+    Numeric,
+    Text,
+    DateTime
+)
 
 
 # --- Enums ---
@@ -37,7 +46,7 @@ class Cliente(SQLModel, table=True):
     nome: str = Field(index=True, max_length=100)
     
     projetos: List["Projeto"] = Relationship(back_populates="cliente")
-    contagens: List["Contagem"] = Relationship(back_populates="cliente") # Relacionamento adicionado
+    contagens: List["Contagem"] = Relationship(back_populates="cliente")
 
 
 class FatorAjuste(SQLModel, table=True):
@@ -46,7 +55,7 @@ class FatorAjuste(SQLModel, table=True):
     fator: float
     tipo_ajuste: TipoAjuste
 
-    funcoes: List["Funcao"] = Relationship(back_populates="fator_ajuste") # Relacionamento adicionado
+    funcoes: List["Funcao"] = Relationship(back_populates="fator_ajuste")
 
 
 class Projeto(SQLModel, table=True):
@@ -56,8 +65,8 @@ class Projeto(SQLModel, table=True):
     cliente_id: int = Field(foreign_key="cliente.id")
     cliente: Cliente = Relationship(back_populates="projetos")
     
-    contagens: List["Contagem"] = Relationship(back_populates="projeto") # Relacionamento adicionado
-
+    contagens: List["Contagem"] = Relationship(back_populates="projeto") 
+    sistemas: List["Sistema"] = Relationship(back_populates="projeto")
 
 class Contagem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -76,6 +85,8 @@ class Contagem(SQLModel, table=True):
     
     projeto_id: int = Field(foreign_key="projeto.id")
     projeto: "Projeto" = Relationship(back_populates="contagens")
+    sistema_id: Optional[int] = Field(default=None, foreign_key="sistema.id")
+    sistema: Optional["Sistema"] = Relationship(back_populates="contagens") 
     
     funcoes: List["Funcao"] = Relationship(back_populates="contagem")
 
@@ -98,3 +109,11 @@ class Funcao(SQLModel, table=True):
     
     fator_ajuste_id: int = Field(foreign_key="fatorajuste.id")
     fator_ajuste: FatorAjuste = Relationship(back_populates="funcoes")
+
+class Sistema(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nome: str = Field(index=True, max_length=100)
+
+    projeto_id: int = Field(foreign_key="projeto.id")
+    projeto: Projeto = Relationship(back_populates="sistemas")
+    contagens: List["Contagem"] = Relationship(back_populates="sistema")

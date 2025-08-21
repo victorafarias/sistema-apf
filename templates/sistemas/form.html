@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Sistema{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Adicionar Novo Sistema</h6>
+    </div>
+    <div class="card-body">
+        <form action="/sistemas/novo" method="post">
+            <div class="form-group">
+                <label for="nome">Nome do Sistema</label>
+                <input type="text" id="nome" name="nome" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="projeto_id">Projeto</label>
+                <select id="projeto_id" name="projeto_id" class="form-control" required>
+                    <option value="" disabled selected>Selecione um projeto</option>
+                    {% for projeto in projetos %}
+                    <option value="{{ projeto.id }}">{{ projeto.nome }} (Cliente: {{ projeto.cliente.nome }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success">Salvar</button>
+            <a href="/sistemas" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

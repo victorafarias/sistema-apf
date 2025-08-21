@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel
 
-from .models import TipoAjuste, Cliente, Projeto, FatorAjuste, TipoContagemEnum, MetodoContagemEnum, TipoFuncaoEnum
+from .models import TipoAjuste, Cliente, Projeto, FatorAjuste, Sistema, TipoContagemEnum, MetodoContagemEnum, TipoFuncaoEnum
 
 
 # --- Schemas Cliente (existentes) ---
@@ -21,7 +21,7 @@ class ClienteRead(ClienteBase):
 class ClienteUpdate(SQLModel):
     nome: Optional[str] = None
 
-# --- NOVO: Schemas para Fator de Ajuste ---
+# --- Schemas para Fator de Ajuste ---
 class FatorAjusteBase(SQLModel):
     nome: str
     fator: float
@@ -38,7 +38,7 @@ class FatorAjusteUpdate(SQLModel):
     fator: Optional[float] = None
     tipo_ajuste: Optional[TipoAjuste] = None
 
-# --- NOVO: Schemas para Projeto ---
+# --- Schemas para Projeto ---
 
 class ProjetoBase(SQLModel):
     nome: str
@@ -61,7 +61,7 @@ class ProjetoUpdate(SQLModel):
 class ProjetoReadWithCliente(ProjetoRead):
     cliente: ClienteRead
 
-# --- NOVO: Schemas para Contagem ---
+# --- Schemas para Contagem ---
 class ContagemBase(SQLModel):
     descricao: str
     tipo_contagem: TipoContagemEnum
@@ -69,6 +69,7 @@ class ContagemBase(SQLModel):
     responsavel: str
     cliente_id: int
     projeto_id: int
+    sistema_id: Optional[int] = None
 
 class ContagemCreate(ContagemBase):
     pass
@@ -88,9 +89,10 @@ class ContagemUpdate(SQLModel):
 class ContagemReadWithRelations(ContagemRead):
     cliente: ClienteRead
     projeto: ProjetoRead
+    sistema: Optional[SistemaRead] = None
 
 
-# --- NOVO: Schemas para Funcao ---
+# --- Schemas para Funcao ---
 class FuncaoBase(SQLModel):
     modulo: str
     funcionalidade: str
@@ -128,3 +130,22 @@ class FuncaoUpdate(SQLModel):
 class FuncaoReadWithRelations(FuncaoRead):
     contagem: ContagemRead
     fator_ajuste: FatorAjusteRead
+
+# --- Schemas para Sistema ---
+
+class SistemaBase(SQLModel):
+    nome: str
+    projeto_id: int
+
+class SistemaCreate(SistemaBase):
+    pass
+
+class SistemaRead(SistemaBase):
+    id: int
+
+class SistemaUpdate(SQLModel):
+    nome: Optional[str] = None
+    projeto_id: Optional[int] = None
+
+class SistemaReadWithProjeto(SistemaRead):
+    projeto: ProjetoReadWithCliente

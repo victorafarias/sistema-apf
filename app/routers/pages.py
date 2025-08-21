@@ -379,3 +379,139 @@ async def handle_delete_projeto(request: Request, projeto_id: int):
     async with httpx.AsyncClient() as client:
         await client.delete(f"{API_BASE_URL}/projetos/{projeto_id}")
     return RedirectResponse(url="/projetos", status_code=303)
+
+# --- ROTAS PARA SISTEMAS ---
+
+@router.get("/sistemas", response_class=HTMLResponse)
+async def list_sistemas_page(
+    request: Request,
+    nome_filter: Optional[str] = None,
+    projeto_id_filter: Optional[str] = None,
+):
+    params = {}
+    if nome_filter:
+        params["nome_filter"] = nome_filter
+    if projeto_id_filter:
+        params["projeto_id_filter"] = projeto_id_filter
+
+    async with httpx.AsyncClient() as client:
+        resp_sistemas = await client.get(f"{API_BASE_URL}/sistemas/", params=params)
+        resp_projetos = await client.get(f"{API_BASE_URL}/projetos/")
+
+    sistemas = resp_sistemas.json() if resp_sistemas.status_code == 200 else []
+    projetos = resp_projetos.json() if resp_projetos.status_code == 200 else []
+
+    return templates.TemplateResponse("sistemas/list.html", {
+        "request": request,
+        "sistemas": sistemas,
+        "projetos": projetos,
+        "nome_filter": nome_filter,
+        "projeto_id_filter": projeto_id_filter,
+    })
+
+@router.get("/sistemas/novo", response_class=HTMLResponse)
+async def create_sistema_form(request: Request):
+    async with httpx.AsyncClient() as client:
+        resp_projetos = await client.get(f"{API_BASE_URL}/projetos/")
+    projetos = resp_projetos.json() if resp_projetos.status_code == 200 else []
+    return templates.TemplateResponse("sistemas/form.html", {"request": request, "projetos": projetos})
+
+@router.post("/sistemas/novo", response_class=HTMLResponse)
+async def handle_create_sistema(request: Request, nome: str = Form(...), projeto_id: int = Form(...)):
+    payload = {"nome": nome, "projeto_id": projeto_id}
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{API_BASE_URL}/sistemas/", json=payload)
+    return RedirectResponse(url="/sistemas", status_code=303)
+
+
+@router.get("/sistemas/{sistema_id}/editar", response_class=HTMLResponse)
+async def edit_sistema_form(request: Request, sistema_id: int):
+    async with httpx.AsyncClient() as client:
+        resp_sistema = await client.get(f"{API_BASE_URL}/sistemas/{sistema_id}")
+        resp_projetos = await client.get(f"{API_BASE_URL}/projetos/")
+    
+    if resp_sistema.status_code == 200:
+        sistema = resp_sistema.json()
+        projetos = resp_projetos.json() if resp_projetos.status_code == 200 else []
+        return templates.TemplateResponse("sistemas/edit.html", {
+            "request": request,
+            "sistema": sistema,
+            "projetos": projetos,
+        })
+    return RedirectResponse(url="/sistemas", status_code=303)
+
+
+@router.post("/sistemas/{sistema_id}/editar", response_class=HTMLResponse)
+async def handle_edit_sistema(request: Request, sistema_id: int, nome: str = Form(...), projeto_id: int = Form(...)):
+    payload = {"nome": nome, "projeto_id": projeto_id}
+    async with httpx.AsyncClient() as client:
+        await client.patch(f"{API_BASE_URL}/sistemas/{sistema_id}", json=payload)
+    return RedirectResponse(url="/sistemas", status_code=303)
+
+
+@router.get("/sistemas/{sistema_id}/excluir", response_class=HTMLResponse)
+async def delete_sistema_form(request: Request, sistema_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/sistemas/{sistema_id}")
+    if response.status_code == 200:
+        sistema = response.json()
+        return templates.TemplateResponse("sistemas/delete.html", {"request": request, "sistema": sistema})
+    return RedirectResponse(url="/sistemas", status_code=303)
+
+
+@router.post("/sistemas/{sistema_id}/excluir", response_class=HTMLResponse)
+async def handle_delete_sistema(request: Request, sistema_id: int):
+    async with httpx.AsyncClient() as client:
+        await client.delete(f"{API_BASE_URL}/sistemas/{sistema_id}")
+    return RedirectResponse(url="/sistemas", status_code=303)
+
+# --- ROTAS PARA CONTAGENS ---
+
+@router.get("/contagens", response_class=HTMLResponse)
+async def list_contagens_page(
+    request: Request,
+    sort: str = Query("-data_criacao"),
+    cliente_id: Optional[str] = Query(None),
+    projeto_id: Optional[str] = Query(None),
+    sistema_id: Optional[str] = Query(None),
+    descricao: Optional[str] = Query(None),
+    tipo_contagem: Optional[str] = Query(None),
+    metodo_contagem: Optional[str] = Query(None),
+):
+    params = {
+        "sort": sort,
+        "cliente_id": cliente_id,
+        "projeto_id": projeto_id,
+        "sistema_id": sistema_id,
+        "descricao": descricao,
+        "tipo_contagem": tipo_contagem,
+        "metodo_contagem": metodo_contagem,
+    }
+    # Remove chaves com valor None para não enviar query vazia
+    params = {k: v for k, v in params.items() if v}
+
+    async with httpx.AsyncClient() as client:
+        resp_contagens = await client.get(f"{API_BASE_URL}/contagens/", params=params)
+        resp_clientes = await client.get(f"{API_BASE_URL}/clientes/")
+        resp_projetos = await client.get(f"{API_BASE_URL}/projetos/")
+        resp_sistemas = await client.get(f"{API_BASE_URL}/sistemas/")
+
+    contagens = resp_contagens.json() if resp_contagens.status_code == 200 else []
+    clientes = resp_clientes.json() if resp_clientes.status_code == 200 else []
+    projetos = resp_projetos.json() if resp_projetos.status_code == 200 else []
+    sistemas = resp_sistemas.json() if resp_sistemas.status_code == 200 else []
+
+    return templates.TemplateResponse(
+        "contagens/list.html",
+        {
+            "request": request,
+            "contagens": contagens,
+            "clientes": clientes,
+            "projetos": projetos,
+            "sistemas": sistemas,
+            "tipos_contagem": [e.value for e in TipoContagemEnum],
+            "metodos_contagem": [e.value for e in MetodoContagemEnum],
+            "current_sort": sort,
+            "filters": params,
+        },
+    )

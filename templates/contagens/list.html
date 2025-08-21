@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Contagens - Sistema APF{% endblock %}
+
+{% block content %}
+
+{# Macro para ajudar a gerar os links de ordenação #}
+{% macro sortable_th(column_name, display_name) %}
+    {% set sort_key = column_name.lower().replace(' ', '_') %}
+    {% set next_sort = '-' + sort_key if current_sort == sort_key else sort_key %}
+    <th scope="col">
+        <a href="?sort={{ next_sort }}&{{ request.query_params|urlencode(exclude='sort') }}">
+            {{ display_name }}
+            {% if current_sort == sort_key %}
+                <i class="fas fa-sort-up"></i>
+            {% elif current_sort == '-' + sort_key %}
+                <i class="fas fa-sort-down"></i>
+            {% else %}
+                <i class="fas fa-sort text-gray-400"></i>
+            {% endif %}
+        </a>
+    </th>
+{% endmacro %}
+
+<h1 class="h3 mb-2 text-gray-800">Contagens de Pontos de Função</h1>
+<p class="mb-4">Visualize e gerencie todas as contagens do sistema.</p>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" action="/contagens">
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="cliente_id">Cliente</label>
+                    <select id="cliente_id" name="cliente_id" class="form-control">
+                        <option value="">Todos</option>
+                        {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}" {% if cliente.id|string == filters.get('cliente_id') %}selected{% endif %}>{{ cliente.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="projeto_id">Projeto</label>
+                    <select id="projeto_id" name="projeto_id" class="form-control">
+                        <option value="">Todos</option>
+                        {% for projeto in projetos %}
+                        <option value="{{ projeto.id }}" {% if projeto.id|string == filters.get('projeto_id') %}selected{% endif %}>{{ projeto.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="sistema_id">Sistema</label>
+                    <select id="sistema_id" name="sistema_id" class="form-control">
+                        <option value="">Todos</option>
+                        {% for sistema in sistemas %}
+                        <option value="{{ sistema.id }}" {% if sistema.id|string == filters.get('sistema_id') %}selected{% endif %}>{{ sistema.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                 <div class="form-group col-md-4">
+                    <label for="descricao">Descrição da Contagem</label>
+                    <input type="text" id="descricao" name="descricao" class="form-control" value="{{ filters.get('descricao', '') }}">
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="tipo_contagem">Tipo da Contagem</label>
+                    <select id="tipo_contagem" name="tipo_contagem" class="form-control">
+                        <option value="">Todos</option>
+                        {% for tipo in tipos_contagem %}
+                        <option value="{{ tipo }}" {% if tipo == filters.get('tipo_contagem') %}selected{% endif %}>{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="metodo_contagem">Método de Contagem</label>
+                    <select id="metodo_contagem" name="metodo_contagem" class="form-control">
+                        <option value="">Todos</option>
+                        {% for metodo in metodos_contagem %}
+                        <option value="{{ metodo }}" {% if metodo == filters.get('metodo_contagem') %}selected{% endif %}>{{ metodo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="/contagens" class="btn btn-secondary">Limpar Filtros</a>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Lista de Contagens</h6>
+        <a href="#" class="btn btn-success btn-icon-split btn-sm">
+            <span class="icon text-white-50"><i class="fas fa-plus"></i></span>
+            <span class="text">Nova Contagem</span>
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        {{ sortable_th('cliente', 'Cliente') }}
+                        {{ sortable_th('projeto', 'Projeto') }}
+                        <th>Sistema</th>
+                        {{ sortable_th('descricao', 'Descrição') }}
+                        {{ sortable_th('tipo_contagem', 'Tipo') }}
+                        {{ sortable_th('metodo_contagem', 'Método') }}
+                        <th>PF Bruto</th>
+                        <th>PF Local</th>
+                        {{ sortable_th('data_criacao', 'Data Criação') }}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contagem in contagens %}
+                    <tr>
+                        <td>{{ contagem.cliente.nome }}</td>
+                        <td>{{ contagem.projeto.nome }}</td>
+                        <td>{{ contagem.sistema.nome if contagem.sistema else 'N/A' }}</td>
+                        <td>{{ contagem.descricao }}</td>
+                        <td>{{ contagem.tipo_contagem }}</td>
+                        <td>{{ contagem.metodo_contagem }}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ contagem.data_criacao|datetimeformat('%d/%m/%Y %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center">Nenhuma contagem encontrada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
