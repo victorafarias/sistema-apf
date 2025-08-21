@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar Exclusão de Projeto{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-danger">Confirmar Exclusão</h6>
+    </div>
+    <div class="card-body">
+        <p>Você tem certeza que deseja excluir o projeto <strong>"{{ projeto.nome }}"</strong>?</p>
+        <p class="text-danger">Esta ação não pode ser desfeita.</p>
+        <form action="/projetos/{{ projeto.id }}/excluir" method="post">
+            <button type="submit" class="btn btn-danger">Sim, excluir</button>
+            <a href="/projetos" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -284,3 +284,98 @@ async def handle_delete_fator(request: Request, fator_id: int):
     async with httpx.AsyncClient() as client:
         await client.delete(f"{API_BASE_URL}/fatores-ajuste/{fator_id}")
     return RedirectResponse(url="/fatores-ajuste", status_code=303)
+
+# app/routers/pages.py (adicionar ao final do arquivo)
+
+# --- ROTAS PARA PROJETOS ---
+
+@router.get("/projetos", response_class=HTMLResponse)
+async def list_projetos_page(
+    request: Request,
+    nome_filter: Optional[str] = None, # <-- NOVO
+    cliente_id_filter: Optional[str] = None, # <-- NOVO (como string)
+):
+    """
+    Renderiza a página que lista os projetos, aplicando filtros.
+    """
+    params = {}
+    if nome_filter:
+        params["nome_filter"] = nome_filter
+    if cliente_id_filter:
+        params["cliente_id_filter"] = cliente_id_filter
+
+    async with httpx.AsyncClient() as client:
+        # Busca os projetos já com os filtros
+        response_projetos = await client.get(f"{API_BASE_URL}/projetos/", params=params)
+        
+        # Busca TODOS os clientes para popular o combobox de filtro
+        response_clientes = await client.get(f"{API_BASE_URL}/clientes/")
+
+    projetos = response_projetos.json() if response_projetos.status_code == 200 else []
+    clientes = response_clientes.json() if response_clientes.status_code == 200 else []
+
+    return templates.TemplateResponse("projetos/list.html", {
+        "request": request,
+        "projetos": projetos,
+        "clientes": clientes, # Passa a lista de clientes para o template
+        "nome_filter": nome_filter, # Devolve os filtros para a tela
+        "cliente_id_filter": cliente_id_filter, # Devolve os filtros para a tela
+    })
+
+@router.get("/projetos/novo", response_class=HTMLResponse)
+async def create_projeto_form(request: Request):
+    # Busca a lista de clientes para popular o combobox
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/clientes/")
+    clientes = response.json() if response.status_code == 200 else []
+    return templates.TemplateResponse("projetos/form.html", {"request": request, "clientes": clientes})
+
+@router.post("/projetos/novo", response_class=HTMLResponse)
+async def handle_create_projeto(request: Request, nome: str = Form(...), cliente_id: int = Form(...)):
+    payload = {"nome": nome, "cliente_id": cliente_id}
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{API_BASE_URL}/projetos/", json=payload)
+    if response.status_code == 201:
+        return RedirectResponse(url="/projetos", status_code=303)
+    # Lógica de erro
+    return RedirectResponse(url="/projetos/novo", status_code=303) # Simplificado
+
+@router.get("/projetos/{projeto_id}/editar", response_class=HTMLResponse)
+async def edit_projeto_form(request: Request, projeto_id: int):
+    async with httpx.AsyncClient() as client:
+        # Busca o projeto específico
+        proj_resp = await client.get(f"{API_BASE_URL}/projetos/{projeto_id}")
+        # Busca TODOS os clientes para o combobox
+        cli_resp = await client.get(f"{API_BASE_URL}/clientes/")
+    
+    if proj_resp.status_code == 200:
+        projeto = proj_resp.json()
+        clientes = cli_resp.json() if cli_resp.status_code == 200 else []
+        return templates.TemplateResponse("projetos/edit.html", {
+            "request": request,
+            "projeto": projeto,
+            "clientes": clientes
+        })
+    return RedirectResponse(url="/projetos", status_code=303)
+
+@router.post("/projetos/{projeto_id}/editar", response_class=HTMLResponse)
+async def handle_edit_projeto(request: Request, projeto_id: int, nome: str = Form(...), cliente_id: int = Form(...)):
+    payload = {"nome": nome, "cliente_id": cliente_id}
+    async with httpx.AsyncClient() as client:
+        response = await client.patch(f"{API_BASE_URL}/projetos/{projeto_id}", json=payload)
+    return RedirectResponse(url="/projetos", status_code=303)
+
+@router.get("/projetos/{projeto_id}/excluir", response_class=HTMLResponse)
+async def delete_projeto_form(request: Request, projeto_id: int):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/projetos/{projeto_id}")
+    if response.status_code == 200:
+        projeto = response.json()
+        return templates.TemplateResponse("projetos/delete.html", {"request": request, "projeto": projeto})
+    return RedirectResponse(url="/projetos", status_code=303)
+
+@router.post("/projetos/{projeto_id}/excluir", response_class=HTMLResponse)
+async def handle_delete_projeto(request: Request, projeto_id: int):
+    async with httpx.AsyncClient() as client:
+        await client.delete(f"{API_BASE_URL}/projetos/{projeto_id}")
+    return RedirectResponse(url="/projetos", status_code=303)
