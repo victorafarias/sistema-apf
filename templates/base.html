@@ -34,9 +34,9 @@
                     <i class="fas fa-fw fa-sliders-h"></i>
                     <span>Fatores de Ajuste</span></a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-fw fa-table"></i>
+            <li class="nav-item {% if 'contagens' in request.url.path %}active{% endif %}">
+                <a class="nav-link" href="/contagens">
+                    <i class="fas fa-fw fa-calculator"></i>
                     <span>Contagens</span></a>
             </li>
         </ul>
@@ -63,5 +63,7 @@
     <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/static/vendor/jquery-easing/jquery.easing.min.js"></script>
     <script src="/static/js/sb-admin-2.min.js"></script>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

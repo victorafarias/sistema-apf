@@ -9,7 +9,7 @@
     {% set sort_key = column_name.lower().replace(' ', '_') %}
     {% set next_sort = '-' + sort_key if current_sort == sort_key else sort_key %}
     <th scope="col">
-        <a href="?sort={{ next_sort }}&{{ request.query_params|urlencode(exclude='sort') }}">
+        <a href="?sort={{ next_sort }}&{{ request.query_params|urlencode_with_exclude(exclude='sort') }}">
             {{ display_name }}
             {% if current_sort == sort_key %}
                 <i class="fas fa-sort-up"></i>
@@ -46,7 +46,9 @@
                     <select id="projeto_id" name="projeto_id" class="form-control">
                         <option value="">Todos</option>
                         {% for projeto in projetos %}
-                        <option value="{{ projeto.id }}" {% if projeto.id|string == filters.get('projeto_id') %}selected{% endif %}>{{ projeto.nome }}</option>
+                        <option value="{{ projeto.id }}" {% if projeto.id|string == filters.get('projeto_id') %}selected{% endif %}>
+                            {{ projeto.nome }} ({{ projeto.cliente.nome }})
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -55,7 +57,9 @@
                     <select id="sistema_id" name="sistema_id" class="form-control">
                         <option value="">Todos</option>
                         {% for sistema in sistemas %}
-                        <option value="{{ sistema.id }}" {% if sistema.id|string == filters.get('sistema_id') %}selected{% endif %}>{{ sistema.nome }}</option>
+                        <option value="{{ sistema.id }}" {% if sistema.id|string == filters.get('sistema_id') %}selected{% endif %}>
+                            {{ sistema.nome }} ({{ sistema.projeto.cliente.nome }} - {{ sistema.projeto.nome }})
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -93,7 +97,7 @@
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
         <h6 class="m-0 font-weight-bold text-primary">Lista de Contagens</h6>
-        <a href="#" class="btn btn-success btn-icon-split btn-sm">
+        <a href="/contagens/novo" class="btn btn-success btn-icon-split btn-sm">
             <span class="icon text-white-50"><i class="fas fa-plus"></i></span>
             <span class="text">Nova Contagem</span>
         </a>
@@ -112,6 +116,7 @@
                         <th>PF Bruto</th>
                         <th>PF Local</th>
                         {{ sortable_th('data_criacao', 'Data Criação') }}
+                        <th style="width: 150px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -126,10 +131,18 @@
                         <td>-</td>
                         <td>-</td>
                         <td>{{ contagem.data_criacao|datetimeformat('%d/%m/%Y %H:%M') }}</td>
+                        <td> {# <-- NOVA COLUNA COM BOTÕES #}
+                            <a href="/contagens/{{ contagem.id }}/editar" class="btn btn-warning btn-sm" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="#" class="btn btn-danger btn-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9" class="text-center">Nenhuma contagem encontrada.</td>
+                        <td colspan="10" class="text-center">Nenhuma contagem encontrada.</td> {# <-- Ajuste o colspan #}
                     </tr>
                     {% endfor %}
                 </tbody>

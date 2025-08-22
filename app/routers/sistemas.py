@@ -4,11 +4,18 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, Session
+from app import models, schemas
 
 from app.database import get_session
 from app.models import Projeto, Sistema
-from app.schemas import SistemaCreate, SistemaRead, SistemaUpdate, SistemaReadWithProjeto
+from app.schemas import (
+    SistemaCreate,
+    SistemaRead,
+    SistemaUpdate,
+    SistemaReadWithProjeto,
+    ProjetoRead
+)
 
 router = APIRouter(prefix="/sistemas", tags=["Sistemas"])
 
@@ -85,3 +92,10 @@ async def delete_sistema(*, session: AsyncSession = Depends(get_session), sistem
     await session.delete(db_sistema)
     await session.commit()
     return
+
+@router.get("/projeto/{projeto_id}", response_model=List[SistemaRead])
+async def listar_por_projeto(projeto_id: int, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(
+        select(Sistema).where(Sistema.projeto_id == projeto_id).order_by(Sistema.nome.asc())
+    )
+    return result.scalars().all()

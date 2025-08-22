@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Contagem{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Nova Contagem de Pontos de Função</h6>
+    </div>
+    <div class="card-body">
+
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="identificacao-tab" data-toggle="tab" href="#identificacao" role="tab" aria-controls="identificacao" aria-selected="true">1. Identificação</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" id="funcoes-tab" data-toggle="tab" href="#funcoes" role="tab" aria-controls="funcoes" aria-selected="false">2. Funções</a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="identificacao" role="tabpanel" aria-labelledby="identificacao-tab">
+                <form action="/contagens/novo" method="post" class="mt-4">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="cliente_id">Cliente</label>
+                            <select id="cliente_id" name="cliente_id" class="form-control" required>
+                                <option value="" disabled selected>Selecione um cliente...</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="projeto_id">Projeto</label>
+                            <select id="projeto_id" name="projeto_id" class="form-control" required disabled>
+                                <option value="" disabled selected>Selecione um cliente primeiro...</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="sistema_id">Sistema (Opcional)</label>
+                            <select id="sistema_id" name="sistema_id" class="form-control" disabled>
+                                <option value="" selected>Selecione um projeto primeiro...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descricao">Descrição da Contagem</label>
+                        <input type="text" id="descricao" name="descricao" class="form-control" placeholder="Ex: Contagem inicial do App de Vendas" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="tipo_contagem">Tipo da Contagem</label>
+                            <select id="tipo_contagem" name="tipo_contagem" class="form-control" required>
+                                {% for tipo in tipos_contagem %}
+                                <option value="{{ tipo }}">{{ tipo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="metodo_contagem">Método de Contagem</label>
+                            <select id="metodo_contagem" name="metodo_contagem" class="form-control" required>
+                                {% for metodo in metodos_contagem %}
+                                <option value="{{ metodo }}">{{ metodo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="data_criacao">Data da Criação</label>
+                            <input type="date" id="data_criacao" name="data_criacao" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                             <label for="responsavel">Responsável</label>
+                             <input type="text" id="responsavel" name="responsavel" class="form-control" value="Victor Farias" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Salvar e Ir para Funções</button>
+                    <a href="/contagens" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+            <div class="tab-pane fade" id="funcoes" role="tabpanel" aria-labelledby="funcoes-tab">
+                ...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+console.log('scripts do form carregados');
+$(function(){ console.log('document.ready do form'); });
+
+$(document).ready(function() {
+    const clienteSelect = $('#cliente_id');
+    const projetoSelect = $('#projeto_id');
+    const sistemaSelect = $('#sistema_id');
+
+    // Função para limpar e resetar um select
+    function resetSelect(selectElement, defaultText, disabled = true) {
+        selectElement.empty().append(`<option value="">${defaultText}</option>`).prop('disabled', disabled);
+    }
+
+    // Evento de mudança na combo de Cliente
+    clienteSelect.change(function() {
+        const clienteId = $(this).val();
+        resetSelect(projetoSelect, 'Carregando projetos...');
+        resetSelect(sistemaSelect, 'Selecione um projeto primeiro');
+
+        if (clienteId) {
+            // Requisição AJAX para buscar os projetos
+            $.ajax({
+                url: `/api/projetos/cliente/${clienteId}`,
+                type: 'GET',
+                success: function(projetos) {
+                    if (projetos.length > 0) {
+                        resetSelect(projetoSelect, 'Selecione um projeto', false); // Habilita e limpa
+                        projetos.forEach(function(projeto) {
+                            projetoSelect.append(`<option value="${projeto.id}">${projeto.nome}</option>`);
+                        });
+                    } else {
+                        resetSelect(projetoSelect, 'Nenhum projeto encontrado');
+                    }
+                },
+                error: function() {
+                    console.error('Erro ao carregar os projetos.');
+                    resetSelect(projetoSelect, 'Erro ao carregar');
+                }
+            });
+        } else {
+             resetSelect(projetoSelect, 'Selecione um cliente primeiro');
+        }
+    });
+
+    // Evento de mudança na combo de Projeto
+    projetoSelect.change(function() {
+        const projetoId = $(this).val();
+        resetSelect(sistemaSelect, 'Carregando sistemas...');
+
+        if (projetoId) {
+             // Requisição AJAX para buscar os sistemas
+            $.ajax({
+                url: `/api/sistemas/projeto/${projetoId}`,
+                type: 'GET',
+                success: function(sistemas) {
+                    if (sistemas.length > 0) {
+                        resetSelect(sistemaSelect, 'Selecione um sistema', false); // Habilita e limpa
+                        sistemas.forEach(function(sistema) {
+                            sistemaSelect.append(`<option value="${sistema.id}">${sistema.nome}</option>`);
+                        });
+                    } else {
+                        resetSelect(sistemaSelect, 'Nenhum sistema encontrado');
+                    }
+                },
+                error: function() {
+                    console.error('Erro ao carregar os sistemas.');
+                    resetSelect(sistemaSelect, 'Erro ao carregar');
+                }
+            });
+        } else {
+            resetSelect(sistemaSelect, 'Selecione um projeto primeiro');
+        }
+    });
+});
+</script>
+{% endblock %}

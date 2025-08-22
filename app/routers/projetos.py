@@ -4,11 +4,18 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import selectinload # Import para otimizar a query
+from sqlalchemy.orm import selectinload, Session
+from app import models, schemas
 
 from app.database import get_session
 from app.models import Projeto
-from app.schemas import ProjetoCreate, ProjetoRead, ProjetoUpdate, ProjetoReadWithCliente
+from app.schemas import (
+    ProjetoCreate,
+    ProjetoRead,
+    ProjetoUpdate,
+    ProjetoReadWithCliente,
+    ClienteRead
+)
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
@@ -76,3 +83,11 @@ async def delete_projeto(*, session: AsyncSession = Depends(get_session), projet
     await session.delete(db_projeto)
     await session.commit()
     return
+
+# --- NOVO ENDPOINT ---
+@router.get("/cliente/{cliente_id}", response_model=List[ProjetoRead])
+async def listar_por_cliente(cliente_id: int, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(
+        select(Projeto).where(Projeto.cliente_id == cliente_id).order_by(Projeto.nome.asc())
+    )
+    return result.scalars().all()

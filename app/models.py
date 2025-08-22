@@ -22,22 +22,21 @@ class TipoAjuste(str, enum.Enum):
     UNITARIO = "Unitário"
 
 class TipoContagemEnum(str, enum.Enum):
-    ESTIMATIVA = "Estimativa"
-    INDICATIVA = "Indicativa"
-    DETALHADA = "Detalhada"
+    DESENVOLVIMENTO = "Desenvolvimento"
+    MELHORIA = "Melhoria"
+    APLICACAO = "Aplicação"
 
 class MetodoContagemEnum(str, enum.Enum):
-    NESMA = "NESMA"
-    IFPUG = "IFPUG"
-    COSMIC = "COSMIC"
-    # Adicione outros métodos se necessário
-
+    DETALHADA = "Detalhada"
+    ESTIMADA = "Estimada"
+ 
 class TipoFuncaoEnum(str, enum.Enum):
-    ALI = "ALI - Arquivo Lógico Interno"
-    AIE = "AIE - Arquivo de Interface Externa"
-    EE = "EE - Entrada Externa"
-    CE = "CE - Consulta Externa"
-    SE = "SE - Saída Externa"
+    ALI = "ALI"
+    AIE = "AIE"
+    EE = "EE"
+    CE = "CE"
+    SE = "SE"
+    INM = "INM"
 
 
 # --- Modelos ---

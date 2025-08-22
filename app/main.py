@@ -25,24 +25,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 # ---------------------------------
 
-
 # Inclui os roteadores na aplicação principal
-app.include_router(clientes.router, prefix="/api") # <-- ADICIONADO PREFIXO /api
-app.include_router(fatores_ajuste.router, prefix="/api")
-app.include_router(pages.router) # <-- NOVO ROTEADOR DE PÁGINAS
 app.include_router(clientes.router, prefix="/api")
 app.include_router(fatores_ajuste.router, prefix="/api")
-app.include_router(projetos.router, prefix="/api") # <-- NOVO
 app.include_router(pages.router)
 app.include_router(clientes.router, prefix="/api")
 app.include_router(fatores_ajuste.router, prefix="/api")
 app.include_router(projetos.router, prefix="/api")
-app.include_router(sistemas.router, prefix="/api") # <-- NOVO
-app.include_router(pages.router)
 app.include_router(sistemas.router, prefix="/api")
-app.include_router(contagens.router, prefix="/api") # NOVO
-app.include_router(pages.router)
-
+app.include_router(contagens.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():

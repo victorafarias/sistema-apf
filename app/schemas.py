@@ -1,7 +1,7 @@
 # app/schemas.py
 
 from typing import Optional, List 
-from datetime import datetime
+from datetime import datetime, date
 from sqlmodel import SQLModel
 
 from .models import TipoAjuste, Cliente, Projeto, FatorAjuste, Sistema, TipoContagemEnum, MetodoContagemEnum, TipoFuncaoEnum
@@ -82,14 +82,16 @@ class ContagemUpdate(SQLModel):
     descricao: Optional[str] = None
     tipo_contagem: Optional[TipoContagemEnum] = None
     metodo_contagem: Optional[MetodoContagemEnum] = None
+    data_criacao: Optional[date | datetime] = None
     responsavel: Optional[str] = None
     cliente_id: Optional[int] = None
     projeto_id: Optional[int] = None
+    sistema_id: Optional[int] = None
 
 class ContagemReadWithRelations(ContagemRead):
     cliente: ClienteRead
     projeto: ProjetoRead
-    sistema: Optional[SistemaRead] = None
+    sistema: Optional["SistemaRead"] = None
 
 
 # --- Schemas para Funcao ---

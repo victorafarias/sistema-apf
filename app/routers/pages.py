@@ -2,13 +2,51 @@
 
 import httpx
 from typing import Optional
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from datetime import datetime
+from datetime import date
+from urllib.parse import urlencode
+
+from app.models import TipoAjuste, TipoContagemEnum, MetodoContagemEnum
 
 router = APIRouter(tags=["Pages"])
 templates = Jinja2Templates(directory="templates")
+
+# --- FUNÇÃO DE FILTRO PERSONALIZADO ---
+def format_datetime(value, fmt="%d/%m/%Y %H:%M"):
+    """Filtro Jinja2 para formatar um datetime."""
+    if isinstance(value, str):
+        # Tenta converter de string ISO para datetime, se necessário
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return value # Retorna o valor original se não puder converter
+    if isinstance(value, datetime):
+        return value.strftime(fmt)
+    return value
+
+# --- REGISTRE O FILTRO NO AMBIENTE DO JINJA ---
+templates.env.filters["datetimeformat"] = format_datetime
+
+# --- CRIE E REGISTRE O FILTRO urlencode_exclude ---
+def urlencode_with_exclude(query_params, **kwargs):
+    # Converte o MultiDict do Starlette para um dict simples
+    params = dict(query_params)
+    # Pega a chave a ser excluída a partir dos kwargs do filtro
+    exclude_key = kwargs.get("exclude")
+    
+    # Remove a chave, se ela existir no dicionário
+    if exclude_key and exclude_key in params:
+        del params[exclude_key]
+        
+    # Codifica os parâmetros restantes e retorna a string
+    return urlencode(params)
+
+# Registra o novo filtro com um nome único
+templates.env.filters["urlencode_with_exclude"] = urlencode_with_exclude
 
 # URL base da nossa própria API
 API_BASE_URL = "http://127.0.0.1:8000/api"
@@ -515,3 +553,117 @@ async def list_contagens_page(
             "filters": params,
         },
     )
+
+@router.get("/contagens/novo", response_class=HTMLResponse)
+async def create_contagem_form(request: Request):
+    """
+    Renderiza a primeira etapa do formulário de criação de contagem (Aba Identificação).
+    """
+    # Para o primeiro combo, buscamos todos os clientes
+    async with httpx.AsyncClient() as client:
+        resp_clientes = await client.get(f"{API_BASE_URL}/clientes/")
+    clientes = resp_clientes.json() if resp_clientes.status_code == 200 else []
+
+    return templates.TemplateResponse(
+        "contagens/form.html",
+        {
+            "request": request,
+            "clientes": clientes,
+            "tipos_contagem": [e.value for e in TipoContagemEnum],
+            "metodos_contagem": [e.value for e in MetodoContagemEnum],
+        },
+    )
+
+@router.post("/contagens/novo", response_class=HTMLResponse)
+async def handle_create_contagem(
+    request: Request,
+    cliente_id: int = Form(...),
+    projeto_id: int = Form(...),
+    sistema_id: Optional[int] = Form(None), # Sistema é opcional
+    descricao: str = Form(...),
+    tipo_contagem: TipoContagemEnum = Form(...),
+    metodo_contagem: MetodoContagemEnum = Form(...),
+    data_criacao: date = Form(...), # <-- NOVO CAMPO
+    responsavel: str = Form(...),
+):
+    payload = {
+        "cliente_id": cliente_id,
+        "projeto_id": projeto_id,
+        "sistema_id": sistema_id,
+        "descricao": descricao,
+        "tipo_contagem": tipo_contagem.value,
+        "metodo_contagem": metodo_contagem.value,
+        "data_criacao": data_criacao.isoformat(),
+        "responsavel": responsavel,
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{API_BASE_URL}/contagens/", json=payload)
+    
+    if response.status_code == 201:
+        contagem_criada = response.json()
+        # Redireciona para a página de edição, já na aba de Funções
+        return RedirectResponse(
+            url=f"/contagens/{contagem_criada['id']}/editar?tab=funcoes", 
+            status_code=303
+        )
+    
+    # Em caso de erro, volta para o formulário
+    # (Futuramente podemos adicionar uma mensagem de erro)
+    return RedirectResponse(url="/contagens/novo", status_code=303)
+
+@router.get("/contagens/{contagem_id}/editar", response_class=HTMLResponse)
+async def edit_contagem_form(request: Request, contagem_id: int):
+    """
+    Renderiza o formulário de edição para uma contagem (Aba Identificação).
+    """
+    async with httpx.AsyncClient() as client:
+        # Busca os dados da contagem específica
+        resp_contagem = await client.get(f"{API_BASE_URL}/contagens/{contagem_id}")
+        if resp_contagem.status_code != 200:
+            return RedirectResponse(url="/contagens?error=notfound", status_code=303)
+        
+        # Busca todas as listas para popular os combos
+        resp_clientes = await client.get(f"{API_BASE_URL}/clientes/")
+
+    contagem = resp_contagem.json()
+    clientes = resp_clientes.json() if resp_clientes.status_code == 200 else []
+
+    return templates.TemplateResponse(
+        "contagens/edit.html",
+        {
+            "request": request,
+            "contagem": contagem,
+            "clientes": clientes,
+            "tipos_contagem": [e.value for e in TipoContagemEnum],
+            "metodos_contagem": [e.value for e in MetodoContagemEnum],
+        },
+    )
+
+@router.post("/contagens/{contagem_id}/editar", response_class=HTMLResponse)
+async def handle_edit_contagem(
+    request: Request,
+    contagem_id: int,
+    cliente_id: int = Form(...),
+    projeto_id: int = Form(...),
+    sistema_id: Optional[int] = Form(None),
+    descricao: str = Form(...),
+    tipo_contagem: TipoContagemEnum = Form(...),
+    metodo_contagem: MetodoContagemEnum = Form(...),
+    data_criacao: date = Form(...),
+    responsavel: str = Form(...),
+):
+    payload = {
+        "cliente_id": cliente_id,
+        "projeto_id": projeto_id,
+        "sistema_id": sistema_id,
+        "descricao": descricao,
+        "tipo_contagem": tipo_contagem.value,
+        "metodo_contagem": metodo_contagem.value,
+        "data_criacao": data_criacao.isoformat(),
+        "responsavel": responsavel,
+    }
+    async with httpx.AsyncClient() as client:
+        await client.patch(f"{API_BASE_URL}/contagens/{contagem_id}", json=payload)
+    
+    return RedirectResponse(url="/contagens", status_code=303)

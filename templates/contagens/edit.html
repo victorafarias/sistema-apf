@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Contagem{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Editar Contagem: {{ contagem.descricao }}</h6>
+    </div>
+    <div class="card-body">
+
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="identificacao-tab" data-toggle="tab" href="#identificacao" role="tab" aria-controls="identificacao" aria-selected="true">1. Identificação</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="funcoes-tab" data-toggle="tab" href="#funcoes" role="tab" aria-controls="funcoes" aria-selected="false">2. Funções</a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="identificacao" role="tabpanel" aria-labelledby="identificacao-tab">
+                <form action="/contagens/{{ contagem.id }}/editar" method="post" class="mt-4">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="cliente_id">Cliente</label>
+                            <select id="cliente_id" name="cliente_id" class="form-control" required>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {% if cliente.id == contagem.cliente_id %}selected{% endif %}>{{ cliente.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="projeto_id">Projeto</label>
+                            <select id="projeto_id" name="projeto_id" class="form-control" required disabled>
+                                <option value="">Carregando...</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="sistema_id">Sistema</label>
+                            <select id="sistema_id" name="sistema_id" class="form-control" disabled>
+                                <option value="">Carregando...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descricao">Descrição da Contagem</label>
+                        <input type="text" id="descricao" name="descricao" class="form-control" value="{{ contagem.descricao }}" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="tipo_contagem">Tipo da Contagem</label>
+                            <select id="tipo_contagem" name="tipo_contagem" class="form-control" required>
+                                {% for tipo in tipos_contagem %}
+                                <option value="{{ tipo }}" {% if tipo == contagem.tipo_contagem %}selected{% endif %}>{{ tipo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="metodo_contagem">Método de Contagem</label>
+                            <select id="metodo_contagem" name="metodo_contagem" class="form-control" required>
+                                {% for metodo in metodos_contagem %}
+                                <option value="{{ metodo }}" {% if metodo == contagem.metodo_contagem %}selected{% endif %}>{{ metodo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="data_criacao">Data da Criação</label>
+                            <input type="date" id="data_criacao" name="data_criacao" class="form-control" value="{{ contagem.data_criacao[:10] }}" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                             <label for="responsavel">Responsável</label>
+                             <input type="text" id="responsavel" name="responsavel" class="form-control" value="{{ contagem.responsavel }}" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    <a href="/contagens" class="btn btn-secondary">Cancelar</a>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="funcoes" role="tabpanel" aria-labelledby="funcoes-tab">
+                <p class="mt-4">A funcionalidade de adicionar/editar funções será implementada na próxima etapa.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+    const clienteSelect = document.getElementById('cliente_id');
+    const projetoSelect = document.getElementById('projeto_id');
+    const sistemaSelect = document.getElementById('sistema_id');
+    const apiBaseUrl = '/api';
+
+    const initialData = {
+        clienteId: {{ contagem.cliente_id }},
+        projetoId: {{ contagem.projeto_id }},
+        sistemaId: {{ contagem.sistema_id or 'null' }}
+    };
+
+    async function populateSelect(selectElement, items, placeholder, selectedId = null, optional = false) {
+        selectElement.innerHTML = '';
+        if (optional) {
+            selectElement.innerHTML = `<option value="">Nenhum (Opcional)</option>`;
+        } else {
+            selectElement.innerHTML = `<option value="" disabled>${placeholder}</option>`;
+        }
+
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.nome;
+            if (item.id === selectedId) {
+                option.selected = true;
+            }
+            selectElement.appendChild(option);
+        });
+        selectElement.disabled = false;
+    }
+
+   async function loadProjetos(clienteId, selectedProjetoId = null) {
+    if (!clienteId) return;
+
+    // Mostra carregando e evita clique durante o fetch
+    projetoSelect.disabled = true;
+    projetoSelect.innerHTML = '<option value="">Carregando...</option>';
+    sistemaSelect.disabled  = true;
+    sistemaSelect.innerHTML = '<option value="">Selecione um projeto primeiro...</option>';
+
+    try {
+        const response = await fetch(`${apiBaseUrl}/projetos/cliente/${clienteId}`);
+        const projetos = await response.json();
+
+        // popula e (re)habilita a combo de projetos
+        populateSelect(projetoSelect, projetos, 'Selecione um projeto...', selectedProjetoId);
+
+        if (selectedProjetoId) {
+        // já havia um projeto definido -> carrega seus sistemas
+        await loadSistemas(selectedProjetoId);
+        } else if (projetos.length > 0) {
+        // 👇 NOVO: escolhe o primeiro projeto e já carrega sistemas
+        const firstId = String(projetos[0].id);
+        projetoSelect.value = firstId;
+        await loadSistemas(firstId);
+        } else {
+        // sem projetos: libera Sistema como “Nenhum (Opcional)”
+        sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
+        sistemaSelect.disabled = false;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar projetos:', error);
+        sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
+        sistemaSelect.disabled = false;
+    }
+    }
+
+    async function loadSistemas(projetoId, selectedSistemaId = null) {
+        if (!projetoId) {
+            sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
+            sistemaSelect.disabled = false;
+            return;
+        }
+        try {
+            const response = await fetch(`${apiBaseUrl}/sistemas/projeto/${projetoId}`);
+            const sistemas = await response.json();
+            populateSelect(sistemaSelect, sistemas, 'Selecione um sistema...', selectedSistemaId, true);
+        } catch (error) {
+            console.error('Erro ao carregar sistemas:', error);
+        }
+    }
+
+    // Eventos de 'change'
+    clienteSelect.addEventListener('change', () => {
+        loadProjetos(clienteSelect.value);
+        // Limpa o select de sistema quando o cliente muda
+        sistemaSelect.innerHTML = '<option value="">Selecione um projeto primeiro...</option>';
+        sistemaSelect.disabled = true;
+    });
+
+    projetoSelect.addEventListener('change', () => {
+        loadSistemas(projetoSelect.value);
+    });
+
+    // Carga inicial dos dados
+    await loadProjetos(initialData.clienteId, initialData.projetoId);
+    await loadSistemas(initialData.projetoId, initialData.sistemaId);
+});
+</script>
+{% endblock %}

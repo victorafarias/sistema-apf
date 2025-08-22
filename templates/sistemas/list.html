@@ -23,7 +23,7 @@
                         <option value="">Todos os Projetos</option>
                         {% for projeto in projetos %}
                         <option value="{{ projeto.id }}" {% if projeto.id|string == projeto_id_filter %}selected{% endif %}>
-                            {{ projeto.nome }} (Cliente: {{projeto.cliente.nome }})
+                            {{ projeto.nome }} ({{projeto.cliente.nome }})
                         </option>
                         {% endfor %}
                     </select>
