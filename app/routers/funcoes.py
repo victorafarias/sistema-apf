@@ -48,11 +48,18 @@ async def upload_step1(
         df_header_8 = pd.read_excel(xls, sheet_name=sheet_name, header=None, skiprows=7, nrows=1)
         df_header_9 = pd.read_excel(xls, sheet_name=sheet_name, header=None, skiprows=8, nrows=1)
 
-        df_header_8.ffill(axis=1, inplace=True)
+        # --- LÓGICA DE PREENCHIMENTO E LEITURA DO CABEÇALHO CORRIGIDA ---
+        # Removido: df_header_8.ffill(axis=1, inplace=True) -> Causava o NotImplementedError
 
         header_list = []
-        for col_idx in range(len(df_header_9.columns)): # Itera pela linha 9 que tem o número correto de colunas de dados
-            val_8 = str(df_header_8.iat[0, col_idx]).strip() if col_idx < len(df_header_8.columns) and pd.notna(df_header_8.iat[0, col_idx]) else ""
+        last_header_8 = "" # Variável para guardar o último valor válido da linha 8
+        for col_idx in range(len(df_header_9.columns)):
+            
+            # Pega o valor da linha 8 e atualiza nossa variável de controle se não for nulo
+            if col_idx < len(df_header_8.columns) and pd.notna(df_header_8.iat[0, col_idx]):
+                last_header_8 = str(df_header_8.iat[0, col_idx]).strip()
+
+            val_8 = last_header_8 # Usa o último valor válido visto
             val_9 = str(df_header_9.iat[0, col_idx]).strip() if pd.notna(df_header_9.iat[0, col_idx]) else ""
             
             header = val_9 if val_9 and 'unnamed' not in val_9.lower() else val_8
@@ -60,6 +67,7 @@ async def upload_step1(
                 header = f"{val_8} - {val_9}"
 
             header_list.append(header)
+        # --- FIM DA CORREÇÃO ---
         
         print("[DEBUG] Cabeçalhos gerados antes da unicidade:", header_list)
 
@@ -107,7 +115,6 @@ async def upload_step1(
         raise HTTPException(status_code=500, detail=f"Ocorreu um erro no servidor ao processar o arquivo: {e}")
 
 
-# (O restante do arquivo funcoes.py continua o mesmo...)
 @router.post("/contagem/{contagem_id}/validate_step2")
 async def validate_step2(
     contagem_id: int,
@@ -118,10 +125,19 @@ async def validate_step2(
 
     dados_planilha = db_temp[contagem_id]["dados_importados"]
     
+    # --- INÍCIO DA ALTERAÇÃO ---
+    texto_a_ignorar = "Só inserir linhas antes desta."
+
+    # Pega todos os nomes únicos de 'Tipo Projeto', aplicando o novo filtro
     tipos_projeto_planilha = {
         str(linha['Tipo Projeto']).strip() 
-        for linha in dados_planilha if linha.get('Tipo Projeto') and pd.notna(linha['Tipo Projeto'])
+        for linha in dados_planilha if (
+            linha.get('Tipo Projeto') and
+            pd.notna(linha['Tipo Projeto']) and
+            str(linha['Tipo Projeto']).strip() != texto_a_ignorar
+        )
     }
+    # --- FIM DA ALTERAÇÃO ---
     
     result = await session.exec(select(FatorAjuste))
     fatores_existentes_db = result.all()
@@ -131,7 +147,6 @@ async def validate_step2(
 
     fatores_novos_para_frontend = []
     for nome_novo in nomes_fatores_novos:
-        # Renomeamos a coluna 'Fator Ajuste' para 'Fator Ajuste - Fator' na logica aprimorada
         nome_coluna_fator = 'Fator Ajuste' if 'Fator Ajuste' in dados_planilha[0] else 'Fator Ajuste - Fator'
         
         linha_correspondente = next(
