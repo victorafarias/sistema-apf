@@ -7,7 +7,15 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 # Importa os roteadores da API e das páginas
-from app.routers import clientes, fatores_ajuste, pages, projetos, sistemas, contagens
+from app.routers import (
+    pages,
+    clientes,
+    sistemas,
+    projetos,
+    contagens,
+    fatores_ajuste,
+    funcoes,
+)
 
 # ... (configuração do logger) ...
 logger.add("logs/app.log", rotation="500 MB", retention="10 days", level="DEBUG")
@@ -34,6 +42,7 @@ app.include_router(fatores_ajuste.router, prefix="/api")
 app.include_router(projetos.router, prefix="/api")
 app.include_router(sistemas.router, prefix="/api")
 app.include_router(contagens.router, prefix="/api")
+app.include_router(funcoes.router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():

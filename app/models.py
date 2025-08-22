@@ -98,16 +98,23 @@ class Funcao(SQLModel, table=True):
     tipo_funcao: TipoFuncaoEnum
     qtd_der: int
     qtd_rlr: int
+    qtd_inm: int
     desc_der: Optional[str] = Field(default=None, sa_column=Column(Text))
     desc_rlr: Optional[str] = Field(default=None, sa_column=Column(Text))
     insumos: Optional[str] = Field(default=None, sa_column=Column(Text))
     observacoes: Optional[str] = Field(default=None, sa_column=Column(Text))
+
+    complexidade: Optional[str] = Field(default=None, max_length=10) # Baixa, Média, Alta
+    ponto_de_funcao_bruto: Optional[int] = Field(default=None)
+    ponto_de_funcao_liquido: Optional[float] = Field(default=None)
     
     contagem_id: int = Field(foreign_key="contagem.id")
     contagem: Contagem = Relationship(back_populates="funcoes")
     
     fator_ajuste_id: int = Field(foreign_key="fatorajuste.id")
     fator_ajuste: FatorAjuste = Relationship(back_populates="funcoes")
+    sistema_id: Optional[int] = Field(default=None, foreign_key="sistema.id")
+    sistema: Optional["Sistema"] = Relationship(back_populates="funcoes")
 
 class Sistema(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -116,3 +123,4 @@ class Sistema(SQLModel, table=True):
     projeto_id: int = Field(foreign_key="projeto.id")
     projeto: Projeto = Relationship(back_populates="sistemas")
     contagens: List["Contagem"] = Relationship(back_populates="sistema")
+    funcoes: List["Funcao"] = Relationship(back_populates="sistema")

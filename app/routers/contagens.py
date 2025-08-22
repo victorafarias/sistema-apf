@@ -6,10 +6,10 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import Form, Body, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, date, time
-
 from app.database import get_session
-from app.models import Contagem, Cliente, Projeto, Sistema, TipoContagemEnum, MetodoContagemEnum
+from app.models import Contagem, Cliente, Projeto, Sistema, TipoContagemEnum, MetodoContagemEnum, Funcao
 from app.schemas import ContagemReadWithRelations, ContagemRead, ContagemUpdate, ContagemCreate
 
 router = APIRouter(prefix="/contagens", tags=["Contagens"])
@@ -201,3 +201,42 @@ async def delete_contagem(
     
     # Retorna uma resposta 204 No Content, que é o padrão para deletes bem-sucedidos
     return
+
+@router.get("/{contagem_id}/edit", response_class=HTMLResponse, name="edit_contagem")
+async def get_edit_contagem_page(
+    request: Request,
+    contagem_id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Renderiza a página de edição para uma contagem, incluindo a lista de suas funções.
+    """
+    # Usamos options(selectinload(...)) para carregar os relacionamentos de forma otimizada
+    query = select(Contagem).where(Contagem.id == contagem_id).options(
+        selectinload(Contagem.funcoes),
+        selectinload(Contagem.cliente),
+        selectinload(Contagem.projeto),
+        selectinload(Contagem.sistema)
+    )
+    result = await session.exec(query)
+    contagem = result.first()
+    
+    if not contagem:
+        raise HTTPException(status_code=404, detail="Contagem não encontrada")
+    
+    # Carrega os dados para preencher os <select> no formulário
+    result_projetos = await session.exec(select(Projeto))
+    result_clientes = await session.exec(select(Cliente))
+    result_sistemas = await session.exec(select(Sistema))
+
+    return request.app.state.templates.TemplateResponse(
+        "contagens/edit.html", 
+        {
+            "request": request, 
+            "contagem": contagem, 
+            "funcoes": contagem.funcoes, # as funções já foram carregadas com o selectinload
+            "projetos": result_projetos.all(),
+            "clientes": result_clientes.all(),
+            "sistemas": result_sistemas.all()
+        }
+    )

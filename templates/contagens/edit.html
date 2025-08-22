@@ -82,7 +82,123 @@
             </div>
 
             <div class="tab-pane fade" id="funcoes" role="tabpanel" aria-labelledby="funcoes-tab">
-                <p class="mt-4">A funcionalidade de adicionar/editar funções será implementada na próxima etapa.</p>
+                <div class="card-body">
+                    
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Funções da Contagem</h1>
+                        <button type="button" class="btn btn-primary shadow-sm" data-toggle="modal" data-target="#importModal">
+                            <i class="fas fa-upload fa-sm text-white-50"></i> Importar Funções
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="dataTableFuncoes" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Tipo</th>
+                                    <th>DER</th>
+                                    <th>Desc. DER</th>
+                                    <th>ALR/RLR</th>
+                                    <th>Desc. ALR/RLR</th>
+                                    <th>Complexidade</th>
+                                    <th>PF Bruto</th>
+                                    <th>PF Líquido</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for funcao in funcoes %}
+                                <tr>
+                                    <td>{{ funcao.nome }}</td>
+                                    <td>{{ funcao.tipo_funcao.value }}</td>
+                                    <td>{{ funcao.qtde_der.value }}</td>
+                                    <td>{{ funcao.desc_der.value }}</td>
+                                    <td>{{ funcao.qtde_rlr.value }}</td>
+                                    <td>{{ funcao.desc_rlr.value }}</td>
+                                    <td>{{ funcao.complexidade or 'N/A' }}</td>
+                                    <td>{{ funcao.ponto_de_funcao_bruto or 'N/A' }}</td>
+                                    <td>{{ funcao.ponto_de_funcao_liquido or 'N/A' }}</td>
+                                    <td>
+                                        </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="10" class="text-center">Nenhuma função importada para esta contagem ainda.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">Importar Funções da Planilha</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="step1">
+                    <h6>Etapa 1 de 4: Enviar Planilha</h6>
+                    <p>Arraste e solte o arquivo .xlsx ou clique na área abaixo para selecionar.</p>
+                    <div id="drop-area" style="border: 2px dashed #ccc; border-radius: 5px; padding: 50px; text-align: center; cursor: pointer;">
+                        <p>Arraste seu arquivo aqui</p>
+                        <i class="fas fa-upload fa-3x text-gray-300"></i>
+                    </div>
+                    <input type="file" id="fileElem" accept=".xlsx" style="display:none">
+                    <div id="upload-progress" class="mt-3" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                Processando...
+                            </div>
+                        </div>
+                    </div>
+                    <div id="step1-error" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
+
+                <div id="step2" style="display: none;">
+                    <h6>Etapa 2 de 4: Validar Fatores de Ajuste</h6>
+                    <div id="step2-loader" class="text-center my-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Validando...</span>
+                        </div>
+                        <p>Validando fatores de ajuste...</p>
+                    </div>
+                    <div id="step2-content" style="display: none;">
+                        <p>Encontramos alguns "Tipos de Projeto" na sua planilha que não existem no sistema. Por favor, complete as informações abaixo para cadastrá-los.</p>
+                        <form id="fatores-form">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo de Projeto (da Planilha)</th>
+                                            <th>Fator (da Planilha)</th>
+                                            <th>Tipo de Ajuste (Selecione)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fatores-novos-table">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </form>
+                        <div id="step2-sem-novos" class="alert alert-success" style="display: none;">
+                            <i class="fas fa-check-circle"></i> Todos os Fatores de Ajuste da planilha já existem no sistema.
+                        </div>
+                    </div>
+                    <div id="step2-error" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="nextButton" disabled>Avançar</button>
             </div>
         </div>
     </div>
@@ -90,8 +206,10 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', async function () {
+    // --- SEÇÃO 1: LÓGICA EXISTENTE DOS SELECTS (CLIENTE/PROJETO/SISTEMA) ---
     const clienteSelect = document.getElementById('cliente_id');
     const projetoSelect = document.getElementById('projeto_id');
     const sistemaSelect = document.getElementById('sistema_id');
@@ -110,7 +228,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         } else {
             selectElement.innerHTML = `<option value="" disabled>${placeholder}</option>`;
         }
-
         items.forEach(item => {
             const option = document.createElement('option');
             option.value = item.id;
@@ -123,40 +240,29 @@ document.addEventListener('DOMContentLoaded', async function () {
         selectElement.disabled = false;
     }
 
-   async function loadProjetos(clienteId, selectedProjetoId = null) {
-    if (!clienteId) return;
-
-    // Mostra carregando e evita clique durante o fetch
-    projetoSelect.disabled = true;
-    projetoSelect.innerHTML = '<option value="">Carregando...</option>';
-    sistemaSelect.disabled  = true;
-    sistemaSelect.innerHTML = '<option value="">Selecione um projeto primeiro...</option>';
-
-    try {
-        const response = await fetch(`${apiBaseUrl}/projetos/cliente/${clienteId}`);
-        const projetos = await response.json();
-
-        // popula e (re)habilita a combo de projetos
-        populateSelect(projetoSelect, projetos, 'Selecione um projeto...', selectedProjetoId);
-
-        if (selectedProjetoId) {
-        // já havia um projeto definido -> carrega seus sistemas
-        await loadSistemas(selectedProjetoId);
-        } else if (projetos.length > 0) {
-        // 👇 NOVO: escolhe o primeiro projeto e já carrega sistemas
-        const firstId = String(projetos[0].id);
-        projetoSelect.value = firstId;
-        await loadSistemas(firstId);
-        } else {
-        // sem projetos: libera Sistema como “Nenhum (Opcional)”
-        sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
-        sistemaSelect.disabled = false;
+    async function loadProjetos(clienteId, selectedProjetoId = null) {
+        if (!clienteId) return;
+        projetoSelect.disabled = true;
+        projetoSelect.innerHTML = '<option value="">Carregando...</option>';
+        sistemaSelect.disabled = true;
+        sistemaSelect.innerHTML = '<option value="">Selecione um projeto primeiro...</option>';
+        try {
+            const response = await fetch(`${apiBaseUrl}/projetos/cliente/${clienteId}`);
+            const projetos = await response.json();
+            populateSelect(projetoSelect, projetos, 'Selecione um projeto...', selectedProjetoId);
+            if (selectedProjetoId) {
+                await loadSistemas(selectedProjetoId, initialData.sistemaId);
+            } else if (projetos.length > 0) {
+                const firstId = String(projetos[0].id);
+                projetoSelect.value = firstId;
+                await loadSistemas(firstId);
+            } else {
+                sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
+                sistemaSelect.disabled = false;
+            }
+        } catch (error) {
+            console.error('Erro ao carregar projetos:', error);
         }
-    } catch (error) {
-        console.error('Erro ao carregar projetos:', error);
-        sistemaSelect.innerHTML = '<option value="">Nenhum (Opcional)</option>';
-        sistemaSelect.disabled = false;
-    }
     }
 
     async function loadSistemas(projetoId, selectedSistemaId = null) {
@@ -174,10 +280,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Eventos de 'change'
     clienteSelect.addEventListener('change', () => {
         loadProjetos(clienteSelect.value);
-        // Limpa o select de sistema quando o cliente muda
         sistemaSelect.innerHTML = '<option value="">Selecione um projeto primeiro...</option>';
         sistemaSelect.disabled = true;
     });
@@ -186,9 +290,193 @@ document.addEventListener('DOMContentLoaded', async function () {
         loadSistemas(projetoSelect.value);
     });
 
-    // Carga inicial dos dados
-    await loadProjetos(initialData.clienteId, initialData.projetoId);
-    await loadSistemas(initialData.projetoId, initialData.sistemaId);
+    if (initialData.clienteId) {
+        await loadProjetos(initialData.clienteId, initialData.projetoId);
+    }
+
+    // =======================================================================
+    // SEÇÃO 2: LÓGICA DA MODAL DE IMPORTAÇÃO (INTEGRADA)
+    // =======================================================================
+
+    let importData = {};
+    const contagemId = {{ contagem.id }};
+    const modal = $('#importModal');
+    
+    const dropArea = document.getElementById('drop-area');
+    const fileElem = document.getElementById('fileElem');
+    const nextButton = document.getElementById('nextButton');
+    const step1Div = document.getElementById('step1');
+    const step2Div = document.getElementById('step2');
+    const step1Error = document.getElementById('step1-error');
+    const step2Error = document.getElementById('step2-error');
+    const step2Loader = document.getElementById('step2-loader');
+    const step2Content = document.getElementById('step2-content');
+    const step2SemNovos = document.getElementById('step2-sem-novos');
+    const fatoresNovosTable = document.getElementById('fatores-novos-table');
+
+    function fetchWithTimeout(url, options, timeout = 30000) { // Timeout aumentado para 30s
+        console.log(`[DEBUG] Iniciando fetch para: ${url}`, options);
+        return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('A requisição demorou muito para responder (timeout). Verifique o console do servidor para erros.')), timeout)
+            )
+        ]);
+    }
+
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, preventDefaults, false));
+    ['dragenter', 'dragover'].forEach(e => dropArea.addEventListener(e, () => dropArea.style.borderColor = 'blue', false));
+    ['dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, () => dropArea.style.borderColor = '#ccc', false));
+    
+    dropArea.addEventListener('drop', handleDrop, false);
+    dropArea.addEventListener('click', () => fileElem.click());
+    fileElem.addEventListener('change', function() { if (this.files.length > 0) handleFiles(this.files); });
+
+    function handleDrop(e) { handleFiles(e.dataTransfer.files); }
+
+    function handleFiles(files) {
+        if (files.length > 1) { showError('step1', "Apenas um arquivo por vez."); return; }
+        const file = files[0];
+        if (!file.name.endsWith('.xlsx')) { showError('step1', "Formato inválido. Envie um arquivo .xlsx."); return; }
+        uploadFile(file);
+    }
+
+    function uploadFile(file) {
+        showLoader('step1');
+        let formData = new FormData();
+        formData.append('file', file);
+
+        fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/upload_step1`, { method: 'POST', body: formData })
+        .then(handleFetchResponse)
+        .then(data => {
+            console.log('[DEBUG] Sucesso Etapa 1:', data);
+            importData.step1 = data;
+            proceedToStep2();
+        })
+        .catch(error => {
+            console.error('[ERRO] Etapa 1:', error);
+            showError('step1', error.message);
+        })
+        .finally(() => hideLoader('step1'));
+    }
+
+    function proceedToStep2() {
+        step1Div.style.display = 'none';
+        step2Div.style.display = 'block';
+        showLoader('step2');
+        
+        fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/validate_step2`, { method: 'POST' })
+        .then(handleFetchResponse)
+        .then(data => {
+            console.log('[DEBUG] Sucesso Validação (Etapa 2):', data);
+            importData.step2 = data; 
+            renderStep2(data.fatores_novos);
+        })
+        .catch(error => {
+            console.error('[ERRO] Etapa 2:', error);
+            showError('step2', error.message);
+        })
+        .finally(() => hideLoader('step2'));
+    }
+
+    function renderStep2(fatoresNovos) {
+        fatoresNovosTable.innerHTML = ''; 
+        if (fatoresNovos && fatoresNovos.length > 0) {
+            step2SemNovos.style.display = 'none';
+            fatoresNovos.forEach(fator => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-nome-fator', fator.nome);
+                row.innerHTML = `<td>${fator.nome}</td><td><input type="number" class="form-control form-control-sm" name="fator_valor" value="${fator.fator || 0.0}" step="0.01"></td><td><select class="form-control form-control-sm" name="tipo_ajuste" required><option value="Percentual">Percentual</option><option value="Unitário">Unitário</option></select></td>`;
+                fatoresNovosTable.appendChild(row);
+            });
+        } else {
+            step2SemNovos.style.display = 'block';
+        }
+        step2Content.style.display = 'block';
+        nextButton.disabled = false;
+        nextButton.onclick = processStep2;
+    }
+
+    function processStep2() {
+        showLoader('step2');
+        const formRows = fatoresNovosTable.querySelectorAll('tr');
+        const novosFatoresPayload = [];
+        formRows.forEach(row => {
+            novosFatoresPayload.push({
+                nome: row.getAttribute('data-nome-fator'),
+                fator: parseFloat(row.querySelector('input[name="fator_valor"]').value),
+                tipo_ajuste: row.querySelector('select[name="tipo_ajuste"]').value
+            });
+        });
+
+        console.log('[DEBUG] Enviando novos fatores:', novosFatoresPayload);
+        fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/create_fatores_step2`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(novosFatoresPayload),
+        })
+        .then(handleFetchResponse)
+        .then(data => {
+            console.log("[DEBUG] Fatores criados:", data.message);
+            step2Div.style.display = 'none';
+            alert("Etapa 2 concluída! Próximo passo: Mapeamento de Colunas.");
+        })
+        .catch(error => {
+            console.error('[ERRO] Processar Etapa 2:', error);
+            showError('step2', error.message);
+        })
+        .finally(() => hideLoader('step2'));
+    }
+
+    function showLoader(step) {
+        if (step === 'step1') {
+            document.getElementById('upload-progress').style.display = 'block';
+            nextButton.disabled = true;
+            step1Error.style.display = 'none';
+        } else if (step === 'step2') {
+            step2Loader.style.display = 'block';
+            step2Content.style.display = 'none';
+            nextButton.disabled = true;
+            step2Error.style.display = 'none';
+        }
+    }
+
+    function hideLoader(step) {
+        if (step === 'step1') {
+            document.getElementById('upload-progress').style.display = 'none';
+        } else if (step === 'step2') {
+            step2Loader.style.display = 'none';
+        }
+    }
+
+    function showError(step, message) {
+        const errorDiv = document.getElementById(`${step}-error`);
+        if(errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    function handleFetchResponse(response) {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.message || 'Ocorreu um erro desconhecido.') });
+        }
+        return response.json();
+    }
+
+    modal.on('hidden.bs.modal', function () {
+        step1Div.style.display = 'block';
+        step2Div.style.display = 'none';
+        step1Error.style.display = 'none';
+        step2Error.style.display = 'none';
+        step2Content.style.display = 'none';
+        fileElem.value = '';
+        nextButton.disabled = true;
+        nextButton.onclick = null;
+        importData = {};
+    });
 });
 </script>
 {% endblock %}
