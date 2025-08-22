@@ -195,6 +195,23 @@
                     </div>
                     <div id="step2-error" class="alert alert-danger mt-3" style="display: none;"></div>
                 </div>
+                <div id="step3" style="display: none;">
+                    <h6>Etapa 3 de 4: Mapear Colunas</h6>
+                    <p>Associe as colunas da sua planilha aos campos do sistema. O sistema tentou adivinhar os melhores mapeamentos, mas por favor, verifique todos os campos.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Campo do Sistema</th>
+                                    <th>Coluna da sua Planilha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapping-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                    <div id="step3-error" class="alert alert-danger mt-3" style="display: none;"></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -307,8 +324,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     const nextButton = document.getElementById('nextButton');
     const step1Div = document.getElementById('step1');
     const step2Div = document.getElementById('step2');
+    const step3Div = document.getElementById('step3');
     const step1Error = document.getElementById('step1-error');
     const step2Error = document.getElementById('step2-error');
+    const step3Error = document.getElementById('step3-error');
     const step2Loader = document.getElementById('step2-loader');
     const step2Content = document.getElementById('step2-content');
     const step2SemNovos = document.getElementById('step2-sem-novos');
@@ -409,7 +428,120 @@ document.addEventListener('DOMContentLoaded', async function () {
                 fator: parseFloat(row.querySelector('input[name="fator_valor"]').value),
                 tipo_ajuste: row.querySelector('select[name="tipo_ajuste"]').value
             });
+        fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/create_fatores_step2`, { /* ... */ })
+        .then(handleFetchResponse)
+        .then(data => {
+            console.log("[DEBUG] Fatores criados:", data.message);
+            
+            // Em vez de um alert, chama a próxima etapa
+            proceedToStep3();
+
+        })
+        .catch(error => { /* ... */ })
+        .finally(() => { /* ... */ });
         });
+    
+        // --- NOVA LÓGICA DA ETAPA 3 ---
+
+    function proceedToStep3() {
+        step2Div.style.display = 'none';
+        step3Div.style.display = 'block';
+        renderStep3();
+    }
+
+    function renderStep3() {
+        // Campos do banco de dados que queremos que o usuário mapeie
+        const camposDB = [
+            { db: 'nome_fator_ajuste', display: 'Tipo Projeto', required: true },
+            { db: 'modulo', display: 'Módulo', required: true },
+            { db: 'funcionalidade', display: 'Funcionalidade', required: true },
+            { db: 'nome', display: 'Nome da Função', required: true },
+            { db: 'tipo_funcao', display: 'Tipo (ALI, AIE, etc)', required: true },
+            { db: 'qtd_der', display: 'Qtd. DER', required: true },
+            { db: 'qtd_rlr', display: 'Qtd. ALR/RLR', required: true },
+            { db: 'desc_der', display: 'Descrição DER', required: false },
+            { db: 'desc_rlr', display: 'Descrição ALR/RLR', required: false },
+            { db: 'insumos', display: 'Insumos', required: false },
+            { db: 'observacoes', display: 'Observação', required: false },
+        ];
+        
+        const headersPlanilha = importData.step1.headers;
+        mappingTableBody.innerHTML = '';
+
+        camposDB.forEach(campo => {
+            const row = document.createElement('tr');
+            
+            let optionsHTML = '<option value="">-- Ignorar este campo --</option>';
+            headersPlanilha.forEach(header => {
+                // Tenta encontrar a melhor correspondência inicial
+                const isSelected = header.toLowerCase().includes(campo.display.toLowerCase().split(' ')[0]);
+                optionsHTML += `<option value="${header}" ${isSelected ? 'selected' : ''}>${header}</option>`;
+            });
+
+            const requiredLabel = campo.required ? '<span class="text-danger">*</span>' : '';
+
+            row.innerHTML = `
+                <td><label for="map-${campo.db}">${campo.display} ${requiredLabel}</label></td>
+                <td>
+                    <select id="map-${campo.db}" data-db-field="${campo.db}" class="form-control form-control-sm" ${campo.required ? 'required' : ''}>
+                        ${optionsHTML}
+                    </select>
+                </td>
+            `;
+            mappingTableBody.appendChild(row);
+        });
+
+        nextButton.disabled = false;
+        nextButton.onclick = processStep3;
+    }
+
+    function processStep3() {
+        showLoader('step3'); // Precisaremos adicionar 'step3' a esta função
+        const selects = mappingTableBody.querySelectorAll('select');
+        const mapeamentoPayload = {};
+        let isValid = true;
+
+        selects.forEach(select => {
+            const campoDB = select.getAttribute('data-db-field');
+            const colunaPlanilha = select.value;
+
+            if (select.required && !colunaPlanilha) {
+                isValid = false;
+            }
+
+            if (colunaPlanilha) { // Apenas envia se um valor foi selecionado
+                mapeamentoPayload[colunaPlanilha] = campoDB;
+            }
+        });
+
+        if (!isValid) {
+            showError('step3', 'Por favor, mapeie todos os campos obrigatórios (*).');
+            hideLoader('step3');
+            return;
+        }
+
+        console.log('[DEBUG] Enviando mapeamento:', mapeamentoPayload);
+
+        fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/process_mapping_step3`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(mapeamentoPayload)
+        })
+        .then(handleFetchResponse)
+        .then(data => {
+            console.log('[DEBUG] Sucesso Mapeamento (Etapa 3):', data);
+            importData.step3 = data;
+            
+            step3Div.style.display = 'none';
+            // document.getElementById('step4').style.display = 'block'; // Próxima etapa
+            alert("Etapa 3 Concluída! Próximo passo: Pré-visualização.");
+        })
+        .catch(error => {
+            console.error('[ERRO] Etapa 3:', error);
+            showError('step3', error.message);
+        })
+        .finally(() => hideLoader('step3'));
+    }
 
         console.log('[DEBUG] Enviando novos fatores:', novosFatoresPayload);
         fetchWithTimeout(`/api/funcoes/contagem/${contagemId}/create_fatores_step2`, {

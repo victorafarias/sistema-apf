@@ -1,6 +1,8 @@
 # app/routers/funcoes.py
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi.params import Body
+from fastapi import Body
 from fastapi.responses import JSONResponse
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,6 +10,7 @@ import pandas as pd
 import io
 from pydantic import BaseModel
 from typing import List
+from app.services import calculation
 
 from app.database import get_session
 from app.models import Contagem, FatorAjuste
@@ -192,3 +195,67 @@ async def create_fatores_step2(
         await session.rollback()
         print(f"Erro ao criar fatores de ajuste: {e}")
         raise HTTPException(status_code=500, detail="Ocorreu um erro ao salvar os novos fatores de ajuste.")
+    
+@router.post("/contagem/{contagem_id}/process_mapping_step3")
+async def process_mapping_step3(
+    contagem_id: int,
+    mapeamento: dict = Body(...), # Recebe o mapeamento como {"Coluna Planilha": "campo_db", ...}
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Etapa 3: Recebe o mapeamento, renomeia os dados, busca IDs, calcula os PFs
+    e prepara os dados para a pré-visualização.
+    """
+    if contagem_id not in db_temp or "dados_importados" not in db_temp[contagem_id]:
+        raise HTTPException(status_code=404, detail="Dados da importação não encontrados.")
+
+    dados_originais = db_temp[contagem_id]["dados_importados"]
+    
+    # 1. Renomeia as chaves dos dicionários com base no mapeamento recebido
+    dados_mapeados = []
+    for linha in dados_originais:
+        nova_linha = {}
+        for coluna_planilha, campo_db in mapeamento.items():
+            if coluna_planilha in linha:
+                nova_linha[campo_db] = linha[coluna_planilha]
+        dados_mapeados.append(nova_linha)
+
+    # 2. Busca todos os fatores de ajuste (incluindo os novos) para criar um mapa de nome -> id
+    result = await session.exec(select(FatorAjuste))
+    mapa_fatores = {fator.nome: fator for fator in result.all()}
+
+    # 3. Enriquece os dados e executa os cálculos
+    dados_processados = []
+    for linha in dados_mapeados:
+        # Pula linhas que não têm um 'Tipo Projeto' (agora mapeado para 'nome_fator_ajuste')
+        nome_fator = linha.get("nome_fator_ajuste")
+        if not nome_fator or pd.isna(nome_fator):
+            continue
+
+        fator_obj = mapa_fatores.get(str(nome_fator).strip())
+        
+        if fator_obj:
+            linha['fator_ajuste_id'] = fator_obj.id
+            # Adiciona o valor do fator para o cálculo
+            linha['fator_ajuste'] = fator_obj.fator
+        else:
+            # Se por algum motivo não encontrar (não deveria acontecer), define valores padrão
+            linha['fator_ajuste_id'] = None
+            linha['fator_ajuste'] = 1.0
+
+        # Garante que os campos numéricos são tratados corretamente
+        linha['qtd_der'] = int(linha.get('qtd_der', 0) or 0)
+        linha['qtd_rlr'] = int(linha.get('qtd_rlr', 0) or 0)
+
+        # Executa o cálculo
+        linha_calculada = calculation.calcular_pontos_de_funcao(linha)
+        dados_processados.append(linha_calculada)
+
+    # Salva os dados processados e prontos para a etapa final
+    db_temp[contagem_id]["dados_processados"] = dados_processados
+    
+    return JSONResponse(status_code=200, content={
+        "message": "Mapeamento processado e cálculos realizados com sucesso.",
+        "total_records": len(dados_processados),
+        "preview": dados_processados[:10] # Envia uma prévia para a Etapa 4
+    })
