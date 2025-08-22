@@ -391,18 +391,39 @@ document.addEventListener('DOMContentLoaded', async function () {
         .then(data => {
             console.log('[DEBUG] Sucesso Validação (Etapa 2):', data);
             importData.step2 = data; 
-            renderStep2(data.fatores_novos);
+            
+            // Se a lista de novos fatores estiver vazia, avança direto
+            if (!data.fatores_novos || data.fatores_novos.length === 0) {
+                console.log("[DEBUG] Nenhum fator novo. Avançando para a Etapa 3.");
+                
+                // Mostra a mensagem de sucesso por um instante
+                step2SemNovos.style.display = 'block';
+                step2Content.style.display = 'block';
+                hideLoader('step2'); // Esconde o spinner
+                nextButton.disabled = true;
+
+                // Após um breve momento, avança para a próxima etapa
+                setTimeout(() => {
+                    proceedToStep3(); // Avança para o mapeamento
+                }, 1500); // 1.5 segundos para o usuário ler a mensagem
+            } else {
+                // Se houver fatores novos, renderiza a tabela para o usuário
+                renderStep2(data.fatores_novos);
+            }
+           
         })
         .catch(error => {
             console.error('[ERRO] Etapa 2:', error);
             showError('step2', error.message);
-        })
-        .finally(() => hideLoader('step2'));
+            hideLoader('step2');
+        });
     }
 
     function renderStep2(fatoresNovos) {
         fatoresNovosTable.innerHTML = ''; 
+        
         if (fatoresNovos && fatoresNovos.length > 0) {
+            // Se HÁ fatores novos, mostra a tabela para o usuário preencher
             step2SemNovos.style.display = 'none';
             fatoresNovos.forEach(fator => {
                 const row = document.createElement('tr');
@@ -410,12 +431,24 @@ document.addEventListener('DOMContentLoaded', async function () {
                 row.innerHTML = `<td>${fator.nome}</td><td><input type="number" class="form-control form-control-sm" name="fator_valor" value="${fator.fator || 0.0}" step="0.01"></td><td><select class="form-control form-control-sm" name="tipo_ajuste" required><option value="Percentual">Percentual</option><option value="Unitário">Unitário</option></select></td>`;
                 fatoresNovosTable.appendChild(row);
             });
+            step2Content.style.display = 'block';
+            nextButton.disabled = false;
+            nextButton.onclick = processStep2;
         } else {
+         
+            // Se NÃO HÁ fatores novos, mostra a mensagem de sucesso por um instante e avança automaticamente.
             step2SemNovos.style.display = 'block';
+            step2Content.style.display = 'block';
+            nextButton.disabled = true; // Mantém o botão desabilitado
+            
+            console.log("[DEBUG] Nenhum fator novo encontrado. Avançando automaticamente para a Etapa 3 em 2 segundos...");
+            
+            // Aguarda 2 segundos para o usuário ver a mensagem e então prossegue
+            setTimeout(() => {
+                proceedToStep3();
+            }, 2000); 
+           
         }
-        step2Content.style.display = 'block';
-        nextButton.disabled = false;
-        nextButton.onclick = processStep2;
     }
 
     function processStep2() {

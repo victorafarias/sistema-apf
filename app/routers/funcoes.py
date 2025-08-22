@@ -123,45 +123,70 @@ async def validate_step2(
     contagem_id: int,
     session: AsyncSession = Depends(get_session),
 ):
+    print("[DEBUG] Iniciando validate_step2")
     if contagem_id not in db_temp or "dados_importados" not in db_temp[contagem_id]:
-        raise HTTPException(status_code=404, detail="Dados da importação não encontrados. Por favor, inicie o processo novamente.")
+        raise HTTPException(status_code=404, detail="Dados da importação não encontrados.")
 
     dados_planilha = db_temp[contagem_id]["dados_importados"]
-    
-    # --- INÍCIO DA ALTERAÇÃO ---
-    texto_a_ignorar = "Só inserir linhas antes desta."
+    if not dados_planilha:
+        return JSONResponse(status_code=200, content={"fatores_novos": []})
 
-    # Pega todos os nomes únicos de 'Tipo Projeto', aplicando o novo filtro
-    tipos_projeto_planilha = {
-        str(linha['Tipo Projeto']).strip() 
-        for linha in dados_planilha if (
-            linha.get('Tipo Projeto') and
-            pd.notna(linha['Tipo Projeto']) and
-            str(linha['Tipo Projeto']).strip() != texto_a_ignorar
-        )
-    }
-    # --- FIM DA ALTERAÇÃO ---
+    # --- INÍCIO DA LÓGICA CORRIGIDA ---
+    # 1. Encontra dinamicamente todas as colunas de "Tipo Projeto"
+    colunas_tipo_projeto = [col for col in dados_planilha[0].keys() if col.startswith('Tipo Projeto')]
+    print(f"[DEBUG] Colunas de 'Tipo Projeto' encontradas: {colunas_tipo_projeto}")
+
+    # 2. Coleta valores de todas essas colunas
+    tipos_projeto_planilha = set()
+    for linha in dados_planilha:
+        for coluna in colunas_tipo_projeto:
+            valor = linha.get(coluna)
+            if valor and pd.notna(valor):
+                tipos_projeto_planilha.add(str(valor).strip())
     
+    # 3. Remove a string a ser ignorada, como solicitado anteriormente
+    texto_a_ignorar = "Só inserir linhas antes desta."
+    if texto_a_ignorar in tipos_projeto_planilha:
+        tipos_projeto_planilha.remove(texto_a_ignorar)
+    print(f"[DEBUG] Tipos de projeto únicos encontrados na planilha: {tipos_projeto_planilha}")
+    # --- FIM DA LÓGICA CORRIGIDA ---
+
     result = await session.exec(select(FatorAjuste))
     fatores_existentes_db = result.all()
     nomes_fatores_db = {fator.nome for fator in fatores_existentes_db}
+    print(f"[DEBUG] Fatores existentes no banco: {nomes_fatores_db}")
 
     nomes_fatores_novos = tipos_projeto_planilha - nomes_fatores_db
+    print(f"[DEBUG] Fatores novos a serem cadastrados: {nomes_fatores_novos}")
+
+    # --- LÓGICA DE BUSCA DO FATOR CORRIGIDA ---
+    colunas_fator_ajuste = [col for col in dados_planilha[0].keys() if col.startswith('Fator Ajuste')]
+    print(f"[DEBUG] Colunas de 'Fator Ajuste' encontradas: {colunas_fator_ajuste}")
 
     fatores_novos_para_frontend = []
     for nome_novo in nomes_fatores_novos:
-        nome_coluna_fator = 'Fator Ajuste' if 'Fator Ajuste' in dados_planilha[0] else 'Fator Ajuste - Fator'
+        linha_correspondente = None
+        for linha in dados_planilha:
+            for coluna_tp in colunas_tipo_projeto:
+                if str(linha.get(coluna_tp, '')).strip() == nome_novo:
+                    linha_correspondente = linha
+                    break
+            if linha_correspondente:
+                break
         
-        linha_correspondente = next(
-            (item for item in dados_planilha if str(item.get('Tipo Projeto', '')).strip() == nome_novo),
-            None
-        )
         if linha_correspondente:
+            fator_valor = 0.0
+            for col_fator in colunas_fator_ajuste:
+                if linha_correspondente.get(col_fator) is not None and pd.notna(linha_correspondente.get(col_fator)):
+                    fator_valor = linha_correspondente.get(col_fator)
+                    break
+            
             fatores_novos_para_frontend.append({
                 "nome": nome_novo,
-                "fator": linha_correspondente.get(nome_coluna_fator, 0.0)
+                "fator": float(fator_valor)
             })
             
+    print("[DEBUG] Enviando para o frontend:", fatores_novos_para_frontend)
     return JSONResponse(
         status_code=200,
         content={"fatores_novos": fatores_novos_para_frontend}
