@@ -667,3 +667,32 @@ async def handle_edit_contagem(
         await client.patch(f"{API_BASE_URL}/contagens/{contagem_id}", json=payload)
     
     return RedirectResponse(url="/contagens", status_code=303)
+
+@router.get("/contagens/{contagem_id}/excluir", response_class=HTMLResponse)
+async def delete_contagem_form(request: Request, contagem_id: int):
+    """
+    Mostra uma página de confirmação antes de excluir um contagem.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{API_BASE_URL}/contagens/{contagem_id}")
+    
+    if response.status_code == 200:
+        contagem = response.json()
+        return templates.TemplateResponse("contagens/delete.html", {
+            "request": request,
+            "contagem": contagem
+        })
+    else:
+        return RedirectResponse(url="/contagens", status_code=303)
+
+
+@router.post("/contagens/{contagem_id}/excluir", response_class=HTMLResponse)
+async def handle_delete_contagem(request: Request, contagem_id: int):
+    """
+    Chama a API para deletar o contagem e redireciona para a lista.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(f"{API_BASE_URL}/contagens/{contagem_id}")
+    
+    # Após a exclusão, sempre redireciona para a lista de contagens
+    return RedirectResponse(url="/contagens", status_code=303)

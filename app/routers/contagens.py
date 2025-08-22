@@ -182,3 +182,22 @@ async def update_contagem(
     await session.commit()
     await session.refresh(db_contagem)
     return db_contagem
+
+@router.delete("/{contagem_id}", status_code=204)
+async def delete_contagem(
+    *, 
+    session: AsyncSession = Depends(get_session), 
+    contagem_id: int
+):
+    """
+    Deleta uma contagem.
+    """
+    db_contagem = await session.get(Contagem, contagem_id)
+    if not db_contagem:
+        raise HTTPException(status_code=404, detail="Contagem não encontrada")
+        
+    await session.delete(db_contagem)
+    await session.commit()
+    
+    # Retorna uma resposta 204 No Content, que é o padrão para deletes bem-sucedidos
+    return
